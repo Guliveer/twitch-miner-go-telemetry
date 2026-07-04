@@ -1,7 +1,14 @@
 import { Redis } from "@upstash/redis";
 import type { DashboardStats, HeartbeatPayload, IStore, StoredInstance, VersionStat } from "../types";
 
-const kv = Redis.fromEnv();
+function createRedisClient(): Redis {
+  return new Redis({
+    url: process.env.KV_REST_API_URL!,
+    token: process.env.KV_REST_API_TOKEN!,
+  });
+}
+
+const kv = createRedisClient();
 
 const KV_PREFIX = "telemetry";
 
@@ -140,5 +147,5 @@ export class UpstashRedisStore implements IStore {
 }
 
 export function isKVConfigured(): boolean {
-  return !!(process.env.UPSTASH_REDIS_REST_URL);
+  return !!(process.env.KV_REST_API_URL);
 }

@@ -6,9 +6,25 @@ function getDataDir(): string {
   return process.env.DATA_DIR ?? path.join(process.cwd(), ".data");
 }
 
-async function getDataPath(): Promise<string> {
+let dataDir: string | null = null;
+
+async function resolveDataDir(): Promise<string> {
+  if (dataDir) return dataDir;
+
   const dir = getDataDir();
-  await fs.mkdir(dir, { recursive: true });
+  try {
+    await fs.mkdir(dir, { recursive: true });
+    dataDir = dir;
+  } catch {
+    const fallback = path.join("/tmp", ".data");
+    await fs.mkdir(fallback, { recursive: true });
+    dataDir = fallback;
+  }
+  return dataDir;
+}
+
+async function getDataPath(): Promise<string> {
+  const dir = await resolveDataDir();
   return path.join(dir, "instances.json");
 }
 

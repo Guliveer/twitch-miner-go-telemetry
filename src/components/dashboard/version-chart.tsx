@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -11,12 +12,29 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { VersionStat } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 interface VersionChartProps {
   data: VersionStat[];
 }
 
+type SortMode = "count" | "version";
+
 export function VersionChart({ data }: VersionChartProps) {
+  const [sortMode, setSortMode] = useState<SortMode>("count");
+
+  const sortedData = useMemo(() => {
+    const sorted = [...data];
+    if (sortMode === "count") {
+      sorted.sort((a, b) => b.count - a.count);
+    } else {
+      sorted.sort((a, b) =>
+        a.version.localeCompare(b.version, undefined, { numeric: true }),
+      );
+    }
+    return sorted;
+  }, [data, sortMode]);
+
   if (data.length === 0) {
     return (
       <Card>
@@ -33,12 +51,40 @@ export function VersionChart({ data }: VersionChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm font-medium">Version Distribution</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium">
+            Version Distribution
+          </CardTitle>
+          <div className="flex items-center gap-0.5 border border-input rounded-none text-xs">
+            <button
+              onClick={() => setSortMode("count")}
+              className={cn(
+                "px-2 py-1 transition-colors",
+                sortMode === "count"
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              by count
+            </button>
+            <button
+              onClick={() => setSortMode("version")}
+              className={cn(
+                "px-2 py-1 transition-colors",
+                sortMode === "version"
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              by version
+            </button>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart
-            data={data}
+            data={sortedData}
             layout="vertical"
             margin={{ top: 0, right: 60, left: 0, bottom: 0 }}
           >
@@ -53,7 +99,7 @@ export function VersionChart({ data }: VersionChartProps) {
             <Tooltip
               formatter={(value) => [`${value} instances`, "Count"]}
             />
-            <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 3, 3, 0]} />
+            <Bar dataKey="count" fill="hsl(var(--chart-1))" radius={[0, 3, 3, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

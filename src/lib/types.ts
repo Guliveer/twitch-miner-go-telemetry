@@ -19,7 +19,20 @@ export interface StoredInstance {
   lastSeen: number;
   runningAccounts: number;
   totalConfigs: number;
+  uptimeSeconds: number | null;
   label: string;
+  ignored: boolean;
+}
+
+export interface DailyCount {
+  date: string;
+  count: number;
+}
+
+export interface UptimeStat {
+  version: string;
+  avgUptimeSeconds: number;
+  count: number;
 }
 
 export interface VersionStat {
@@ -33,9 +46,15 @@ export interface DashboardStats {
   active1h: number;
   active24h: number;
   active7d: number;
+  totalRunningAccounts: number;
+  totalConfiguredAccounts: number;
+  fullCapacityCount: number;
   versionDistribution: VersionStat[];
   osDistribution: { name: string; count: number }[];
   deploymentDistribution: { name: string; count: number }[];
+  firstSeenDistribution: DailyCount[];
+  uptimeByVersion: UptimeStat[];
+  accountsDistribution: { instanceId: string; running: number; total: number; label: string }[];
   recentInstances: StoredInstance[];
 }
 
@@ -60,6 +79,7 @@ export interface IStore {
   getInstances(limit?: number, offset?: number): Promise<{ instances: StoredInstance[]; total: number }>;
   getInstanceLabels(): Promise<LabelEntry[]>;
   setInstanceLabel(instanceId: string, label: string): Promise<void>;
+  setInstanceIgnored(instanceId: string, ignored: boolean): Promise<void>;
   prune(): Promise<number>;
 }
 

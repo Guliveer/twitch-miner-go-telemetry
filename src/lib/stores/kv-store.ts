@@ -1,5 +1,5 @@
 import { Redis } from "@upstash/redis";
-import type { DashboardStats, HeartbeatPayload, IStore, LabelEntry, StoredInstance, VersionStat } from "../types";
+import type { DashboardStats, DailyCount, HeartbeatPayload, IStore, LabelEntry, StoredInstance, UptimeStat, VersionStat } from "../types";
 import { getPruneThreshold } from "../types";
 
 function createRedisClient(): Redis {
@@ -38,6 +38,7 @@ export class UpstashRedisStore implements IStore {
         os: payload.os ?? existingRaw.os,
         arch: payload.arch ?? existingRaw.arch,
         deployment: payload.deployment ?? existingRaw.deployment,
+        uptimeSeconds: payload.uptime_seconds ?? existingRaw.uptimeSeconds,
         runningAccounts: payload.running_accounts ?? existingRaw.runningAccounts,
         totalConfigs: payload.total_configs ?? existingRaw.totalConfigs,
       };
@@ -54,7 +55,9 @@ export class UpstashRedisStore implements IStore {
         lastSeen: now,
         runningAccounts: payload.running_accounts ?? 0,
         totalConfigs: payload.total_configs ?? 0,
+        uptimeSeconds: payload.uptime_seconds ?? null,
         label: existingLabel,
+        ignored: false,
       };
       await kv.set(instanceKey(payload.instance_id), instance, { nx: true });
 
@@ -85,9 +88,15 @@ export class UpstashRedisStore implements IStore {
         active1h: 0,
         active24h: 0,
         active7d: 0,
+        totalRunningAccounts: 0,
+        totalConfiguredAccounts: 0,
+        fullCapacityCount: 0,
         versionDistribution: [],
         osDistribution: [],
         deploymentDistribution: [],
+        firstSeenDistribution: [],
+        uptimeByVersion: [],
+        accountsDistribution: [],
         recentInstances: [],
       };
     }
@@ -103,13 +112,14 @@ export class UpstashRedisStore implements IStore {
         totalConfigs: i.totalConfigs ?? 0,
       }));
 
-    const total = instances.length;
-    const active1h = instances.filter((i) => now - i.lastSeen < oneHour).length;
-    const active24h = instances.filter((i) => now - i.lastSeen < oneDay).length;
-    const active7d = instances.filter((i) => now - i.lastSeen < sevenDays).length;
+    const tracked = instances.filter((i) => !i.ignored);
+    const total = tracked.length;
+    const active1h = tracked.filter((i) => now - i.lastSeen < oneHour).length;
+    const active24h = tracked.filter((i) => now - i.lastSeen < oneDay).length;
+    const active7d = tracked.filter((i) => now - i.lastSeen < sevenDays).length;
 
     const versionCounts = new Map<string, number>();
-    for (const inst of instances) {
+    for (const inst of tracked) {
       versionCounts.set(inst.version, (versionCounts.get(inst.version) ?? 0) + 1);
     }
     const versionDistribution: VersionStat[] = [...versionCounts.entries()]
@@ -121,7 +131,7 @@ export class UpstashRedisStore implements IStore {
       .sort((a, b) => b.count - a.count);
 
     const osCounts = new Map<string, number>();
-    for (const inst of instances) {
+    for (const inst of tracked) {
       const key = inst.os ?? "unknown";
       osCounts.set(key, (osCounts.get(key) ?? 0) + 1);
     }
@@ -130,7 +140,7 @@ export class UpstashRedisStore implements IStore {
       .sort((a, b) => b.count - a.count);
 
     const depCounts = new Map<string, number>();
-    for (const inst of instances) {
+    for (const inst of tracked) {
       const key = inst.deployment ?? "unknown";
       depCounts.set(key, (depCounts.get(key) ?? 0) + 1);
     }
@@ -140,8 +150,50 @@ export class UpstashRedisStore implements IStore {
 
     const allLabels = await kv.hgetall<Record<string, string>>(labelsHashKey());
 
+    const firstSeenBuckets = new Map<string, number>();
+    for (const inst of tracked) {
+      const date = new Date(inst.firstSeen).toISOString().slice(0, 10);
+      firstSeenBuckets.set(date, (firstSeenBuckets.get(date) ?? 0) + 1);
+    }
+    const firstSeenDistribution: DailyCount[] = [...firstSeenBuckets.entries()]
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    const uptimeByVersionMap = new Map<string, { sum: number; count: number }>();
+    for (const inst of tracked) {
+      if (inst.uptimeSeconds == null) continue;
+      const entry = uptimeByVersionMap.get(inst.version) ?? { sum: 0, count: 0 };
+      entry.sum += inst.uptimeSeconds;
+      entry.count += 1;
+      uptimeByVersionMap.set(inst.version, entry);
+    }
+    const uptimeByVersion: UptimeStat[] = [...uptimeByVersionMap.entries()]
+      .map(([version, { sum, count }]) => ({
+        version,
+        avgUptimeSeconds: Math.round(sum / count),
+        count,
+      }))
+      .sort((a, b) => b.avgUptimeSeconds - a.avgUptimeSeconds);
+
+    const totalRunningAccounts = tracked.reduce((s, i) => s + i.runningAccounts, 0);
+    const totalConfiguredAccounts = tracked.reduce((s, i) => s + i.totalConfigs, 0);
+    const fullCapacityCount = tracked.filter((i) => i.runningAccounts > 0 && i.runningAccounts === i.totalConfigs).length;
+
+    const accountsDistribution = tracked
+      .map((inst) => ({
+        instanceId: inst.instanceId,
+        running: inst.runningAccounts,
+        total: inst.totalConfigs,
+        label: inst.label,
+      }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 30);
+
     const recentInstances = [...instances]
-      .sort((a, b) => b.lastSeen - a.lastSeen)
+      .sort((a, b) => {
+        if (a.ignored !== b.ignored) return a.ignored ? 1 : -1;
+        return b.lastSeen - a.lastSeen;
+      })
       .slice(0, 50);
 
     if (allLabels) {
@@ -155,9 +207,15 @@ export class UpstashRedisStore implements IStore {
       active1h,
       active24h,
       active7d,
+      totalRunningAccounts,
+      totalConfiguredAccounts,
+      fullCapacityCount,
       versionDistribution,
       osDistribution,
       deploymentDistribution,
+      firstSeenDistribution,
+      uptimeByVersion,
+      accountsDistribution,
       recentInstances,
     };
   }
@@ -178,7 +236,10 @@ export class UpstashRedisStore implements IStore {
         totalConfigs: i.totalConfigs ?? 0,
       }));
 
-    instances.sort((a, b) => b.lastSeen - a.lastSeen);
+    instances.sort((a, b) => {
+      if (a.ignored !== b.ignored) return a.ignored ? 1 : -1;
+      return b.lastSeen - a.lastSeen;
+    });
 
     const allLabels = await kv.hgetall<Record<string, string>>(labelsHashKey());
     if (allLabels) {
@@ -198,6 +259,13 @@ export class UpstashRedisStore implements IStore {
 
   async setInstanceLabel(instanceId: string, label: string): Promise<void> {
     await kv.hset(labelsHashKey(), { [instanceId]: label });
+  }
+
+  async setInstanceIgnored(instanceId: string, ignored: boolean): Promise<void> {
+    const raw = await kv.get<StoredInstance>(instanceKey(instanceId));
+    if (!raw) return;
+    raw.ignored = ignored;
+    await kv.set(instanceKey(instanceId), raw);
   }
 
   async prune(): Promise<number> {

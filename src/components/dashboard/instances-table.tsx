@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -25,6 +26,9 @@ import {
   CaretDownIcon,
   MagnifyingGlassIcon,
   XIcon,
+  EyeSlashIcon,
+  EyeIcon,
+  DownloadIcon,
 } from "@phosphor-icons/react";
 import type { StoredInstance } from "@/lib/types";
 
@@ -122,13 +126,13 @@ function LabelCell({ instance }: { instance: StoredInstance }) {
       {value ? (
         <ScrollingText text={value} />
       ) : (
-        <span className="text-muted-foreground italic">Add label...</span>
+        <span className="text-muted-foreground">—</span>
       )}
     </button>
   );
 }
 
-type SortColumn = "instanceId" | "version" | "os" | "deployment" | "lastSeen" | "label" | "accounts";
+type SortColumn = "instanceId" | "version" | "os" | "deployment" | "lastSeen" | "firstSeen" | "label" | "accounts";
 
 interface SortState {
   column: SortColumn;
@@ -202,10 +206,13 @@ function SortHeader({
 }
 
 export function InstancesTable({ instances }: InstancesTableProps) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [filterVersion, setFilterVersion] = useState("");
   const [filterOs, setFilterOs] = useState("");
   const [filterDeployment, setFilterDeployment] = useState("");
+  const [showIgnored, setShowIgnored] = useState(true);
+  const [toggling, setToggling] = useState<string | null>(null);
   const [sort, setSort] = useState<SortState>({ column: "lastSeen", direction: "desc" });
 
   const uniqueVersions = useMemo(
@@ -226,10 +233,30 @@ export function InstancesTable({ instances }: InstancesTableProps) {
     [instances],
   );
 
-  const hasFilters = search || filterVersion || filterOs || filterDeployment;
+  const hasFilters = search || filterVersion || filterOs || filterDeployment || !showIgnored;
+
+  async function toggleIgnore(instanceId: string, current: boolean) {
+    setToggling(instanceId);
+    try {
+      const res = await fetch(`/api/instances/${instanceId}/ignore`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ignored: !current }),
+      });
+      if (res.ok) router.refresh();
+    } catch {
+      console.error("Ignore toggle failed");
+    } finally {
+      setToggling(null);
+    }
+  }
 
   const filtered = useMemo(() => {
     let result = instances;
+
+    if (!showIgnored) {
+      result = result.filter((i) => !i.ignored);
+    }
 
     if (search) {
       const q = search.toLowerCase();
@@ -271,6 +298,9 @@ export function InstancesTable({ instances }: InstancesTableProps) {
         case "lastSeen":
           cmp = a.lastSeen - b.lastSeen;
           break;
+        case "firstSeen":
+          cmp = a.firstSeen - b.firstSeen;
+          break;
         case "label":
           cmp = (a.label ?? "").localeCompare(b.label ?? "");
           break;
@@ -284,7 +314,35 @@ export function InstancesTable({ instances }: InstancesTableProps) {
     });
 
     return result;
-  }, [instances, search, filterVersion, filterOs, filterDeployment, sort]);
+  }, [instances, search, filterVersion, filterOs, filterDeployment, sort, showIgnored]);
+
+  const ignoredCount = useMemo(() => instances.filter((i) => i.ignored).length, [instances]);
+
+  function exportCSV() {
+    const headers = ["Instance ID", "Label", "Version", "OS", "Arch", "Deployment", "First Seen", "Last Seen", "Running Accounts", "Total Configs", "Ignored"];
+    const rows = instances.map((inst) => [
+      inst.instanceId,
+      inst.label,
+      inst.version,
+      inst.os ?? "",
+      inst.arch ?? "",
+      inst.deployment ?? "",
+      new Date(inst.firstSeen).toISOString(),
+      new Date(inst.lastSeen).toISOString(),
+      String(inst.runningAccounts),
+      String(inst.totalConfigs),
+      inst.ignored ? "yes" : "no",
+    ]);
+
+    const csv = [headers.join(","), ...rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "instances.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   function toggleSort(column: SortColumn) {
     setSort((prev) => ({
@@ -315,7 +373,16 @@ export function InstancesTable({ instances }: InstancesTableProps) {
             <span className="text-muted-foreground font-normal ml-1">
               ({filtered.length}{hasFilters ? ` / ${instances.length}` : ""})
             </span>
+            {ignoredCount > 0 && (
+              <span className="text-muted-foreground font-normal ml-1">
+                | {ignoredCount} ignored
+              </span>
+            )}
           </CardTitle>
+          <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5">
+            <DownloadIcon className="size-3.5" />
+            CSV
+          </Button>
         </div>
         <div className="flex flex-wrap items-center gap-2 mt-2">
           <div className="relative flex-1 min-w-[160px] max-w-[240px]">
@@ -378,6 +445,16 @@ export function InstancesTable({ instances }: InstancesTableProps) {
             </SelectContent>
           </Select>
 
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none whitespace-nowrap">
+            <input
+              type="checkbox"
+              checked={showIgnored}
+              onChange={(e) => setShowIgnored(e.target.checked)}
+              className="size-3.5 accent-foreground"
+            />
+            Show ignored
+          </label>
+
           {hasFilters && (
             <button
               onClick={() => {
@@ -385,6 +462,7 @@ export function InstancesTable({ instances }: InstancesTableProps) {
                 setFilterVersion("");
                 setFilterOs("");
                 setFilterDeployment("");
+                setShowIgnored(true);
               }}
               className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
             >
@@ -403,19 +481,21 @@ export function InstancesTable({ instances }: InstancesTableProps) {
               <SortHeader column="version" sort={sort} onToggle={toggleSort}>Version</SortHeader>
               <SortHeader column="os" sort={sort} onToggle={toggleSort}>OS</SortHeader>
               <SortHeader column="deployment" sort={sort} onToggle={toggleSort}>Deployment</SortHeader>
+              <SortHeader column="firstSeen" sort={sort} onToggle={toggleSort}>First Seen</SortHeader>
               <SortHeader column="lastSeen" sort={sort} onToggle={toggleSort}>Last Seen</SortHeader>
+              <TableHead className="w-10">Ignored</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
+                <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-8">
                   No instances match the current filters
                 </TableCell>
               </TableRow>
             ) : (
               filtered.map((inst) => (
-                <TableRow key={inst.instanceId}>
+                <TableRow key={inst.instanceId} className={inst.ignored ? "opacity-50" : undefined}>
                   <TableCell className="font-mono text-xs break-all max-w-[200px]">
                     {inst.instanceId}
                   </TableCell>
@@ -435,7 +515,24 @@ export function InstancesTable({ instances }: InstancesTableProps) {
                   <TableCell className="text-sm">{inst.os ?? "—"}</TableCell>
                   <TableCell className="text-sm">{inst.deployment ?? "—"}</TableCell>
                   <TableCell className="text-right text-sm tabular-nums">
+                    <TimeSince timestamp={inst.firstSeen} />
+                  </TableCell>
+                  <TableCell className="text-right text-sm tabular-nums">
                     <TimeSince timestamp={inst.lastSeen} />
+                  </TableCell>
+                  <TableCell>
+                    <button
+                      onClick={() => toggleIgnore(inst.instanceId, inst.ignored)}
+                      disabled={toggling === inst.instanceId}
+                      className="p-1 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30"
+                      title={inst.ignored ? "Include in analytics" : "Ignore in analytics"}
+                    >
+                      {inst.ignored ? (
+                        <EyeSlashIcon className="size-4" />
+                      ) : (
+                        <EyeIcon className="size-4" />
+                      )}
+                    </button>
                   </TableCell>
                 </TableRow>
               ))

@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { DashboardStats, HeartbeatPayload, IStore, LabelEntry, StoredInstance, VersionStat } from "../types";
+import type { DashboardStats, DailyCount, HeartbeatPayload, IStore, LabelEntry, StoredInstance, UptimeStat, VersionStat } from "../types";
 import { getPruneThreshold } from "../types";
 
 function getDataDir(): string {
@@ -122,6 +122,7 @@ export class FileStore implements IStore {
       if (payload.os) existing.os = payload.os;
       if (payload.arch) existing.arch = payload.arch;
       if (payload.deployment) existing.deployment = payload.deployment;
+      if (payload.uptime_seconds != null) existing.uptimeSeconds = payload.uptime_seconds;
       if (payload.running_accounts != null) existing.runningAccounts = payload.running_accounts;
       if (payload.total_configs != null) existing.totalConfigs = payload.total_configs;
     } else {
@@ -135,7 +136,9 @@ export class FileStore implements IStore {
         lastSeen: now,
         runningAccounts: payload.running_accounts ?? 0,
         totalConfigs: payload.total_configs ?? 0,
+        uptimeSeconds: payload.uptime_seconds ?? null,
         label: this.labels.get(payload.instance_id) ?? "",
+        ignored: false,
       });
     }
 
@@ -158,13 +161,14 @@ export class FileStore implements IStore {
     const sevenDays = 7 * oneDay;
 
     const instances = [...this.instances.values()];
-    const total = instances.length;
-    const active1h = instances.filter((i) => now - i.lastSeen < oneHour).length;
-    const active24h = instances.filter((i) => now - i.lastSeen < oneDay).length;
-    const active7d = instances.filter((i) => now - i.lastSeen < sevenDays).length;
+    const tracked = instances.filter((i) => !i.ignored);
+    const total = tracked.length;
+    const active1h = tracked.filter((i) => now - i.lastSeen < oneHour).length;
+    const active24h = tracked.filter((i) => now - i.lastSeen < oneDay).length;
+    const active7d = tracked.filter((i) => now - i.lastSeen < sevenDays).length;
 
     const versionCounts = new Map<string, number>();
-    for (const inst of instances) {
+    for (const inst of tracked) {
       versionCounts.set(inst.version, (versionCounts.get(inst.version) ?? 0) + 1);
     }
     const versionDistribution: VersionStat[] = [...versionCounts.entries()]
@@ -176,7 +180,7 @@ export class FileStore implements IStore {
       .sort((a, b) => b.count - a.count);
 
     const osCounts = new Map<string, number>();
-    for (const inst of instances) {
+    for (const inst of tracked) {
       const key = inst.os ?? "unknown";
       osCounts.set(key, (osCounts.get(key) ?? 0) + 1);
     }
@@ -185,7 +189,7 @@ export class FileStore implements IStore {
       .sort((a, b) => b.count - a.count);
 
     const depCounts = new Map<string, number>();
-    for (const inst of instances) {
+    for (const inst of tracked) {
       const key = inst.deployment ?? "unknown";
       depCounts.set(key, (depCounts.get(key) ?? 0) + 1);
     }
@@ -193,13 +197,56 @@ export class FileStore implements IStore {
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
 
+    const firstSeenBuckets = new Map<string, number>();
+    for (const inst of tracked) {
+      const date = new Date(inst.firstSeen).toISOString().slice(0, 10);
+      firstSeenBuckets.set(date, (firstSeenBuckets.get(date) ?? 0) + 1);
+    }
+    const firstSeenDistribution: DailyCount[] = [...firstSeenBuckets.entries()]
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    const uptimeByVersionMap = new Map<string, { sum: number; count: number }>();
+    for (const inst of tracked) {
+      if (inst.uptimeSeconds == null) continue;
+      const entry = uptimeByVersionMap.get(inst.version) ?? { sum: 0, count: 0 };
+      entry.sum += inst.uptimeSeconds;
+      entry.count += 1;
+      uptimeByVersionMap.set(inst.version, entry);
+    }
+    const uptimeByVersion: UptimeStat[] = [...uptimeByVersionMap.entries()]
+      .map(([version, { sum, count }]) => ({
+        version,
+        avgUptimeSeconds: Math.round(sum / count),
+        count,
+      }))
+      .sort((a, b) => b.avgUptimeSeconds - a.avgUptimeSeconds);
+
+    const totalRunningAccounts = tracked.reduce((s, i) => s + i.runningAccounts, 0);
+    const totalConfiguredAccounts = tracked.reduce((s, i) => s + i.totalConfigs, 0);
+    const fullCapacityCount = tracked.filter((i) => i.runningAccounts > 0 && i.runningAccounts === i.totalConfigs).length;
+
+    const accountsDistribution = tracked
+      .map((inst) => ({
+        instanceId: inst.instanceId,
+        running: inst.runningAccounts,
+        total: inst.totalConfigs,
+        label: inst.label,
+      }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 30);
+
+    // All instances sorted: non-ignored first (by lastSeen desc), then ignored (by lastSeen desc)
     const recentInstances = [...instances]
       .map((inst) => ({
         ...inst,
         runningAccounts: inst.runningAccounts ?? 0,
         totalConfigs: inst.totalConfigs ?? 0,
       }))
-      .sort((a, b) => b.lastSeen - a.lastSeen)
+      .sort((a, b) => {
+        if (a.ignored !== b.ignored) return a.ignored ? 1 : -1;
+        return b.lastSeen - a.lastSeen;
+      })
       .slice(0, 50);
 
     return {
@@ -207,9 +254,15 @@ export class FileStore implements IStore {
       active1h,
       active24h,
       active7d,
+      totalRunningAccounts,
+      totalConfiguredAccounts,
+      fullCapacityCount,
       versionDistribution,
       osDistribution,
       deploymentDistribution,
+      firstSeenDistribution,
+      uptimeByVersion,
+      accountsDistribution,
       recentInstances,
     };
   }
@@ -224,7 +277,10 @@ export class FileStore implements IStore {
         totalConfigs: inst.totalConfigs ?? 0,
         label: this.labels.get(inst.instanceId) ?? inst.label,
       }))
-      .sort((a, b) => b.lastSeen - a.lastSeen);
+      .sort((a, b) => {
+        if (a.ignored !== b.ignored) return a.ignored ? 1 : -1;
+        return b.lastSeen - a.lastSeen;
+      });
 
     return {
       total: all.length,
@@ -248,6 +304,16 @@ export class FileStore implements IStore {
     }
 
     this.scheduleLabelsWrite();
+  }
+
+  async setInstanceIgnored(instanceId: string, ignored: boolean): Promise<void> {
+    await this.ensureLoaded();
+
+    const inst = this.instances.get(instanceId);
+    if (!inst) return;
+
+    inst.ignored = ignored;
+    this.scheduleWrite();
   }
 
   async prune(): Promise<number> {

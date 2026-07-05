@@ -40,7 +40,7 @@ export function StatsCards({
   active7d,
 }: StatsCardsProps) {
   return (
-    <div className="flex flex-wrap gap-4">
+    <div className="flex flex-wrap gap-3">
       <StatCard label="Total Instances" value={totalInstances} />
       <StatCard label="Active (1h)" value={active1h} />
       <StatCard label="Active (24h)" value={active24h} />

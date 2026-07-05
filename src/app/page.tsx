@@ -11,7 +11,7 @@ export default async function Dashboard() {
   const stats = await store.getStats();
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-6">
+    <div className="flex flex-1 flex-col gap-4 p-4">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">twitch-miner-go Telemetry</h1>
         <p className="text-sm text-muted-foreground">
@@ -28,7 +28,7 @@ export default async function Dashboard() {
 
       <VersionChart data={stats.versionDistribution} />
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <OSChart data={stats.osDistribution} />
         <DeploymentChart data={stats.deploymentDistribution} />
       </div>

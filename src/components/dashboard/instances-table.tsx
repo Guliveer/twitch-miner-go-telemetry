@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -31,7 +32,103 @@ interface InstancesTableProps {
   instances: StoredInstance[];
 }
 
-type SortColumn = "instanceId" | "version" | "os" | "deployment" | "lastSeen";
+function ScrollingText({ text }: { text: string }) {
+  const containerRef = useRef<HTMLSpanElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [scrolling, setScrolling] = useState(false);
+  const [distance, setDistance] = useState(0);
+
+  useEffect(() => {
+    const c = containerRef.current;
+    const t = textRef.current;
+    if (!c || !t) return;
+    const overflow = t.scrollWidth > c.clientWidth;
+    setScrolling(overflow);
+    if (overflow) setDistance(t.scrollWidth - c.clientWidth);
+  }, [text]);
+
+  return (
+    <span ref={containerRef} className="block overflow-hidden">
+      <span
+        ref={textRef}
+        className="block whitespace-nowrap"
+        style={
+          scrolling
+            ? { animation: `marquee 8s linear infinite`, "--marquee-dist": `${-distance}px` } as React.CSSProperties
+            : undefined
+        }
+      >
+        {text}
+      </span>
+    </span>
+  );
+}
+
+function LabelCell({ instance }: { instance: StoredInstance }) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [value, setValue] = useState(instance.label ?? "");
+
+  async function save() {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/instances/${instance.instanceId}/label`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: value }),
+      });
+      if (res.ok) router.refresh();
+    } catch {
+      console.error("Label save failed");
+    } finally {
+      setSaving(false);
+      setEditing(false);
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") {
+      save();
+    } else if (e.key === "Escape") {
+      setValue(instance.label ?? "");
+      setEditing(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <input
+        className="w-full bg-transparent border border-input rounded px-1 py-0.5 text-xs font-mono outline-none focus:border-ring"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={save}
+        onKeyDown={handleKeyDown}
+        autoFocus
+        disabled={saving}
+      />
+    );
+  }
+
+  return (
+    <button
+      className="text-xs text-left w-full hover:bg-muted/50 rounded px-1 py-0.5 transition-colors max-w-[280px]"
+      onClick={() => {
+        setValue(instance.label ?? "");
+        setEditing(true);
+      }}
+      title="Click to edit label"
+    >
+      {value ? (
+        <ScrollingText text={value} />
+      ) : (
+        <span className="text-muted-foreground italic">Add label...</span>
+      )}
+    </button>
+  );
+}
+
+type SortColumn = "instanceId" | "version" | "os" | "deployment" | "lastSeen" | "label" | "accounts";
 
 interface SortState {
   column: SortColumn;
@@ -50,13 +147,59 @@ function timeAgo(timestamp: number): string {
   return `${days}d ago`;
 }
 
-const SORT_LABELS: Record<SortColumn, string> = {
-  instanceId: "Instance ID",
-  version: "Version",
-  os: "OS",
-  deployment: "Deployment",
-  lastSeen: "Last Seen",
-};
+function TimeSince({ timestamp }: { timestamp: number }) {
+  const [label, setLabel] = useState("—");
+
+  useEffect(() => {
+    setLabel(timeAgo(timestamp));
+    const id = setInterval(() => setLabel(timeAgo(timestamp)), 30_000);
+    return () => clearInterval(id);
+  }, [timestamp]);
+
+  return <>{label}</>;
+}
+
+function SortHeader({
+  column,
+  sort,
+  onToggle,
+  children,
+}: {
+  column: SortColumn;
+  sort: SortState;
+  onToggle: (column: SortColumn) => void;
+  children: React.ReactNode;
+}) {
+  const active = sort.column === column;
+  return (
+    <TableHead
+      className="cursor-pointer select-none whitespace-nowrap hover:text-foreground transition-colors"
+      onClick={() => onToggle(column)}
+    >
+      <span className="inline-flex items-center gap-1">
+        {children}
+        <span className="inline-flex flex-col leading-none">
+          <CaretUpIcon
+            className={`size-3 -mb-0.5 ${
+              active && sort.direction === "asc"
+                ? "text-foreground"
+                : "text-muted-foreground/40"
+            }`}
+            weight={active && sort.direction === "asc" ? "fill" : "regular"}
+          />
+          <CaretDownIcon
+            className={`size-3 -mt-0.5 ${
+              active && sort.direction === "desc"
+                ? "text-foreground"
+                : "text-muted-foreground/40"
+            }`}
+            weight={active && sort.direction === "desc" ? "fill" : "regular"}
+          />
+        </span>
+      </span>
+    </TableHead>
+  );
+}
 
 export function InstancesTable({ instances }: InstancesTableProps) {
   const [search, setSearch] = useState("");
@@ -87,7 +230,11 @@ export function InstancesTable({ instances }: InstancesTableProps) {
 
     if (search) {
       const q = search.toLowerCase();
-      result = result.filter((i) => i.instanceId.toLowerCase().includes(q));
+      result = result.filter(
+        (i) =>
+          i.instanceId.toLowerCase().includes(q) ||
+          i.label.toLowerCase().includes(q),
+      );
     }
     if (filterVersion) {
       result = result.filter((i) => i.version === filterVersion);
@@ -121,6 +268,14 @@ export function InstancesTable({ instances }: InstancesTableProps) {
         case "lastSeen":
           cmp = a.lastSeen - b.lastSeen;
           break;
+        case "label":
+          cmp = a.label.localeCompare(b.label);
+          break;
+        case "accounts":
+          cmp = a.runningAccounts - b.runningAccounts;
+          break;
+        default:
+          cmp = 0;
       }
       return sort.direction === "desc" ? -cmp : cmp;
     });
@@ -133,38 +288,6 @@ export function InstancesTable({ instances }: InstancesTableProps) {
       column,
       direction: prev.column === column && prev.direction === "asc" ? "desc" : "asc",
     }));
-  }
-
-  function SortHeader({ column, children }: { column: SortColumn; children: React.ReactNode }) {
-    const active = sort.column === column;
-    return (
-      <TableHead
-        className="cursor-pointer select-none whitespace-nowrap hover:text-foreground transition-colors"
-        onClick={() => toggleSort(column)}
-      >
-        <span className="inline-flex items-center gap-1">
-          {children}
-          <span className="inline-flex flex-col leading-none">
-            <CaretUpIcon
-              className={`size-3 -mb-0.5 ${
-                active && sort.direction === "asc"
-                  ? "text-foreground"
-                  : "text-muted-foreground/40"
-              }`}
-              weight={active && sort.direction === "asc" ? "fill" : "regular"}
-            />
-            <CaretDownIcon
-              className={`size-3 -mt-0.5 ${
-                active && sort.direction === "desc"
-                  ? "text-foreground"
-                  : "text-muted-foreground/40"
-              }`}
-              weight={active && sort.direction === "desc" ? "fill" : "regular"}
-            />
-          </span>
-        </span>
-      </TableHead>
-    );
   }
 
   if (instances.length === 0) {
@@ -271,17 +394,19 @@ export function InstancesTable({ instances }: InstancesTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <SortHeader column="instanceId">Instance ID</SortHeader>
-              <SortHeader column="version">Version</SortHeader>
-              <SortHeader column="os">OS</SortHeader>
-              <SortHeader column="deployment">Deployment</SortHeader>
-              <SortHeader column="lastSeen">Last Seen</SortHeader>
+              <SortHeader column="instanceId" sort={sort} onToggle={toggleSort}>Instance ID</SortHeader>
+              <SortHeader column="label" sort={sort} onToggle={toggleSort}>Label</SortHeader>
+              <SortHeader column="accounts" sort={sort} onToggle={toggleSort}>Accounts</SortHeader>
+              <SortHeader column="version" sort={sort} onToggle={toggleSort}>Version</SortHeader>
+              <SortHeader column="os" sort={sort} onToggle={toggleSort}>OS</SortHeader>
+              <SortHeader column="deployment" sort={sort} onToggle={toggleSort}>Deployment</SortHeader>
+              <SortHeader column="lastSeen" sort={sort} onToggle={toggleSort}>Last Seen</SortHeader>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
                   No instances match the current filters
                 </TableCell>
               </TableRow>
@@ -292,6 +417,14 @@ export function InstancesTable({ instances }: InstancesTableProps) {
                     {inst.instanceId}
                   </TableCell>
                   <TableCell>
+                    <LabelCell instance={inst} />
+                  </TableCell>
+                  <TableCell className="text-sm whitespace-nowrap">
+                    <span className="tabular-nums">{inst.runningAccounts}</span>
+                    <span className="text-muted-foreground"> / </span>
+                    <span className="tabular-nums text-muted-foreground">{inst.totalConfigs}</span>
+                  </TableCell>
+                  <TableCell>
                     <Badge variant="outline" className="font-mono">
                       {inst.version}
                     </Badge>
@@ -299,7 +432,7 @@ export function InstancesTable({ instances }: InstancesTableProps) {
                   <TableCell className="text-sm">{inst.os ?? "—"}</TableCell>
                   <TableCell className="text-sm">{inst.deployment ?? "—"}</TableCell>
                   <TableCell className="text-right text-sm tabular-nums">
-                    {timeAgo(inst.lastSeen)}
+                    <TimeSince timestamp={inst.lastSeen} />
                   </TableCell>
                 </TableRow>
               ))

@@ -21,7 +21,7 @@ interface VersionChartProps {
 type SortMode = "count" | "version";
 
 export function VersionChart({ data }: VersionChartProps) {
-  const [sortMode, setSortMode] = useState<SortMode>("count");
+  const [sortMode, setSortMode] = useState<SortMode>("version");
 
   const sortedData = useMemo(() => {
     const sorted = [...data];
@@ -29,7 +29,7 @@ export function VersionChart({ data }: VersionChartProps) {
       sorted.sort((a, b) => b.count - a.count);
     } else {
       sorted.sort((a, b) =>
-        a.version.localeCompare(b.version, undefined, { numeric: true }),
+        b.version.localeCompare(a.version, undefined, { numeric: true }),
       );
     }
     return sorted;
@@ -95,6 +95,8 @@ export function VersionChart({ data }: VersionChartProps) {
             />
             <XAxis
               type="number"
+              domain={[0, "dataMax"]}
+              allowDecimals={false}
               tick={{ fill: "var(--foreground)", fontSize: 12 }}
               stroke="var(--border)"
             />

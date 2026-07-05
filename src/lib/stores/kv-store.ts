@@ -1,5 +1,6 @@
 import { Redis } from "@upstash/redis";
-import type { DashboardStats, HeartbeatPayload, IStore, StoredInstance, VersionStat } from "../types";
+import type { DashboardStats, HeartbeatPayload, IStore, LabelEntry, StoredInstance, VersionStat } from "../types";
+import { getPruneThreshold } from "../types";
 
 function createRedisClient(): Redis {
   return new Redis({
@@ -20,6 +21,10 @@ function idsKey(): string {
   return `${KV_PREFIX}:instance-ids`;
 }
 
+function labelsHashKey(): string {
+  return `${KV_PREFIX}:labels`;
+}
+
 export class UpstashRedisStore implements IStore {
   async recordHeartbeat(payload: HeartbeatPayload): Promise<void> {
     const now = Date.now();
@@ -33,9 +38,12 @@ export class UpstashRedisStore implements IStore {
         os: payload.os ?? existingRaw.os,
         arch: payload.arch ?? existingRaw.arch,
         deployment: payload.deployment ?? existingRaw.deployment,
+        runningAccounts: payload.running_accounts ?? existingRaw.runningAccounts,
+        totalConfigs: payload.total_configs ?? existingRaw.totalConfigs,
       };
       await kv.set(instanceKey(payload.instance_id), updated);
     } else {
+      const existingLabel = (await kv.hget<string>(labelsHashKey(), payload.instance_id)) ?? "";
       const instance: StoredInstance = {
         instanceId: payload.instance_id,
         version: payload.version,
@@ -44,11 +52,22 @@ export class UpstashRedisStore implements IStore {
         deployment: payload.deployment ?? null,
         firstSeen: now,
         lastSeen: now,
+        runningAccounts: payload.running_accounts ?? 0,
+        totalConfigs: payload.total_configs ?? 0,
+        label: existingLabel,
       };
       await kv.set(instanceKey(payload.instance_id), instance, { nx: true });
 
       // Track ID in a set so we can enumerate all instances
       await kv.sadd(idsKey(), payload.instance_id);
+    }
+
+    // Probabilistic pruning: ~1% chance per heartbeat to avoid scanning on every call
+    if (Math.random() < 0.01) {
+      const pruned = await this.prune();
+      if (pruned > 0) {
+        console.log(`[telemetry] Pruned ${pruned} stale instance(s) from Redis`);
+      }
     }
   }
 
@@ -76,7 +95,13 @@ export class UpstashRedisStore implements IStore {
     const keys = ids.map(instanceKey);
     const rawInstances = await kv.mget<StoredInstance[]>(...keys);
     // mget returns (null | StoredInstance)[] — filter out any nulls
-    const instances: StoredInstance[] = rawInstances.filter((i): i is StoredInstance => i !== null);
+    const instances: StoredInstance[] = rawInstances
+      .filter((i): i is StoredInstance => i !== null)
+      .map((i) => ({
+        ...i,
+        runningAccounts: i.runningAccounts ?? 0,
+        totalConfigs: i.totalConfigs ?? 0,
+      }));
 
     const total = instances.length;
     const active1h = instances.filter((i) => now - i.lastSeen < oneHour).length;
@@ -113,9 +138,17 @@ export class UpstashRedisStore implements IStore {
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
 
+    const allLabels = await kv.hgetall<Record<string, string>>(labelsHashKey());
+
     const recentInstances = [...instances]
       .sort((a, b) => b.lastSeen - a.lastSeen)
       .slice(0, 50);
+
+    if (allLabels) {
+      for (const inst of recentInstances) {
+        inst.label = allLabels[inst.instanceId] ?? inst.label;
+      }
+    }
 
     return {
       totalInstances: total,
@@ -137,12 +170,58 @@ export class UpstashRedisStore implements IStore {
     const page = sorted.slice(offset, offset + limit);
     const keys = page.map(instanceKey);
     const rawInstances = await kv.mget<StoredInstance[]>(...keys);
-    const instances = rawInstances.filter((i): i is StoredInstance => i !== null);
+    const instances = rawInstances
+      .filter((i): i is StoredInstance => i !== null)
+      .map((i) => ({
+        ...i,
+        runningAccounts: i.runningAccounts ?? 0,
+        totalConfigs: i.totalConfigs ?? 0,
+      }));
 
-    // Sort by lastSeen descending for display
     instances.sort((a, b) => b.lastSeen - a.lastSeen);
 
+    const allLabels = await kv.hgetall<Record<string, string>>(labelsHashKey());
+    if (allLabels) {
+      for (const inst of instances) {
+        inst.label = allLabels[inst.instanceId] ?? inst.label;
+      }
+    }
+
     return { total, instances };
+  }
+
+  async getInstanceLabels(): Promise<LabelEntry[]> {
+    const allLabels = await kv.hgetall<Record<string, string>>(labelsHashKey());
+    if (!allLabels) return [];
+    return Object.entries(allLabels).map(([instanceId, label]) => ({ instanceId, label }));
+  }
+
+  async setInstanceLabel(instanceId: string, label: string): Promise<void> {
+    await kv.hset(labelsHashKey(), { [instanceId]: label });
+  }
+
+  async prune(): Promise<number> {
+    const threshold = Date.now() - getPruneThreshold();
+    const ids = await kv.smembers(idsKey());
+    const staleIds: string[] = [];
+
+    for (const id of ids) {
+      const raw = await kv.get<StoredInstance>(instanceKey(id));
+      if (!raw || raw.lastSeen < threshold) {
+        staleIds.push(id);
+      }
+    }
+
+    if (staleIds.length === 0) return 0;
+
+    const pipeline = kv.pipeline();
+    for (const id of staleIds) {
+      pipeline.del(instanceKey(id));
+      pipeline.srem(idsKey(), id);
+    }
+    await pipeline.exec();
+
+    return staleIds.length;
   }
 }
 

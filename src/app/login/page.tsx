@@ -1,39 +1,15 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default function LoginPage() {
-  const router = useRouter();
-  const [error, setError] = useState<string>("");
-  const [loading, setLoading] = useState(false);
-
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-
-    const form = new FormData(e.currentTarget);
-    const res = await fetch("/api/auth", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username: form.get("username"),
-        password: form.get("password"),
-      }),
-    });
-
-    if (res.ok) {
-      router.push("/");
-    } else {
-      setError("Invalid username or password");
-      setLoading(false);
-    }
-  }
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const error = searchParams.has("error");
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
@@ -43,22 +19,28 @@ export default function LoginPage() {
           <CardDescription>twitch-miner-go Telemetry dashboard</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form action="/api/auth" method="POST" className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
-              <Input id="username" name="username" type="text" required autoFocus />
+              <Input id="username" name="username" type="text" required autoFocus autoComplete="username" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" name="password" type="password" required />
+              <Input id="password" name="password" type="password" required autoComplete="current-password" />
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in..." : "Sign in"}
-            </Button>
+            {error && <p className="text-sm text-destructive">Invalid username or password</p>}
+            <Button type="submit" className="w-full">Sign in</Button>
           </form>
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

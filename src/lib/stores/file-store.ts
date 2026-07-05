@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { DashboardStats, HeartbeatPayload, IStore, StoredInstance, VersionStat } from "../types";
+import type { DashboardStats, HeartbeatPayload, IStore, LabelEntry, StoredInstance, VersionStat } from "../types";
+import { getPruneThreshold } from "../types";
 
 function getDataDir(): string {
   return process.env.DATA_DIR ?? path.join(process.cwd(), ".data");
@@ -28,24 +29,38 @@ async function getDataPath(): Promise<string> {
   return path.join(dir, "instances.json");
 }
 
+async function getLabelsPath(): Promise<string> {
+  const dir = await resolveDataDir();
+  return path.join(dir, "labels.json");
+}
+
 export class FileStore implements IStore {
   private instances = new Map<string, StoredInstance>();
+  private labels = new Map<string, string>();
   private loaded = false;
   private writeScheduled = false;
+  private labelsWriteScheduled = false;
 
   private async ensureLoaded(): Promise<void> {
     if (this.loaded) return;
     this.loaded = true;
 
-    try {
-      const dataPath = await getDataPath();
-      const raw = await fs.readFile(dataPath, "utf-8");
+    const dataPath = await getDataPath();
+    const raw = await fs.readFile(dataPath, "utf-8").catch(() => undefined);
+    if (raw) {
       const parsed: StoredInstance[] = JSON.parse(raw);
       for (const inst of parsed) {
         this.instances.set(inst.instanceId, inst);
       }
-    } catch {
-      // File doesn't exist or is corrupt — start fresh
+    }
+
+    const labelsPath = await getLabelsPath();
+    const labelsRaw = await fs.readFile(labelsPath, "utf-8").catch(() => undefined);
+    if (labelsRaw) {
+      const parsed: LabelEntry[] = JSON.parse(labelsRaw);
+      for (const entry of parsed) {
+        this.labels.set(entry.instanceId, entry.label);
+      }
     }
   }
 
@@ -62,12 +77,37 @@ export class FileStore implements IStore {
     }, 1_000).unref();
   }
 
+  private scheduleLabelsWrite(): void {
+    if (this.labelsWriteScheduled) return;
+    this.labelsWriteScheduled = true;
+
+    setTimeout(async () => {
+      try {
+        await this.flushLabels();
+      } finally {
+        this.labelsWriteScheduled = false;
+      }
+    }, 500).unref();
+  }
+
   async flush(): Promise<void> {
     const dataPath = await getDataPath();
     const data = JSON.stringify([...this.instances.values()], null, 2);
     const tmp = dataPath + ".tmp";
     await fs.writeFile(tmp, data, "utf-8");
     await fs.rename(tmp, dataPath);
+  }
+
+  async flushLabels(): Promise<void> {
+    const labelsPath = await getLabelsPath();
+    const entries: LabelEntry[] = [...this.labels.entries()].map(([instanceId, label]) => ({
+      instanceId,
+      label,
+    }));
+    const data = JSON.stringify(entries, null, 2);
+    const tmp = labelsPath + ".tmp";
+    await fs.writeFile(tmp, data, "utf-8");
+    await fs.rename(tmp, labelsPath);
   }
 
   async recordHeartbeat(payload: HeartbeatPayload): Promise<void> {
@@ -82,6 +122,8 @@ export class FileStore implements IStore {
       if (payload.os) existing.os = payload.os;
       if (payload.arch) existing.arch = payload.arch;
       if (payload.deployment) existing.deployment = payload.deployment;
+      if (payload.running_accounts != null) existing.runningAccounts = payload.running_accounts;
+      if (payload.total_configs != null) existing.totalConfigs = payload.total_configs;
     } else {
       this.instances.set(payload.instance_id, {
         instanceId: payload.instance_id,
@@ -91,10 +133,20 @@ export class FileStore implements IStore {
         deployment: payload.deployment ?? null,
         firstSeen: now,
         lastSeen: now,
+        runningAccounts: payload.running_accounts ?? 0,
+        totalConfigs: payload.total_configs ?? 0,
+        label: this.labels.get(payload.instance_id) ?? "",
       });
     }
 
     this.scheduleWrite();
+
+    if (Math.random() < 0.01) {
+      const pruned = await this.prune();
+      if (pruned > 0) {
+        console.log(`[telemetry] Pruned ${pruned} stale instance(s) from file store`);
+      }
+    }
   }
 
   async getStats(): Promise<DashboardStats> {
@@ -142,6 +194,11 @@ export class FileStore implements IStore {
       .sort((a, b) => b.count - a.count);
 
     const recentInstances = [...instances]
+      .map((inst) => ({
+        ...inst,
+        runningAccounts: inst.runningAccounts ?? 0,
+        totalConfigs: inst.totalConfigs ?? 0,
+      }))
       .sort((a, b) => b.lastSeen - a.lastSeen)
       .slice(0, 50);
 
@@ -160,10 +217,57 @@ export class FileStore implements IStore {
   async getInstances(limit = 100, offset = 0): Promise<{ instances: StoredInstance[]; total: number }> {
     await this.ensureLoaded();
 
-    const all = [...this.instances.values()].sort((a, b) => b.lastSeen - a.lastSeen);
+    const all = [...this.instances.values()]
+      .map((inst) => ({
+        ...inst,
+        runningAccounts: inst.runningAccounts ?? 0,
+        totalConfigs: inst.totalConfigs ?? 0,
+        label: this.labels.get(inst.instanceId) ?? inst.label,
+      }))
+      .sort((a, b) => b.lastSeen - a.lastSeen);
+
     return {
       total: all.length,
       instances: all.slice(offset, offset + limit),
     };
+  }
+
+  async getInstanceLabels(): Promise<LabelEntry[]> {
+    await this.ensureLoaded();
+    return [...this.labels.entries()].map(([instanceId, label]) => ({ instanceId, label }));
+  }
+
+  async setInstanceLabel(instanceId: string, label: string): Promise<void> {
+    await this.ensureLoaded();
+    this.labels.set(instanceId, label);
+
+    const inst = this.instances.get(instanceId);
+    if (inst) {
+      inst.label = label;
+      this.scheduleWrite();
+    }
+
+    this.scheduleLabelsWrite();
+  }
+
+  async prune(): Promise<number> {
+    await this.ensureLoaded();
+
+    const threshold = Date.now() - getPruneThreshold();
+    const stale: string[] = [];
+
+    for (const [id, inst] of this.instances) {
+      if (inst.lastSeen < threshold) {
+        stale.push(id);
+      }
+    }
+
+    for (const id of stale) {
+      this.instances.delete(id);
+    }
+
+    if (stale.length > 0) this.scheduleWrite();
+
+    return stale.length;
   }
 }

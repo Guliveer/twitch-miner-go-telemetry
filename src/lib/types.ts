@@ -5,6 +5,8 @@ export interface HeartbeatPayload {
   arch?: string;
   deployment?: string;
   uptime_seconds?: number;
+  running_accounts?: number;
+  total_configs?: number;
 }
 
 export interface StoredInstance {
@@ -15,6 +17,9 @@ export interface StoredInstance {
   deployment: string | null;
   firstSeen: number;
   lastSeen: number;
+  runningAccounts: number;
+  totalConfigs: number;
+  label: string;
 }
 
 export interface VersionStat {
@@ -44,8 +49,21 @@ export interface HeartbeatResponse {
   message: string;
 }
 
+export interface LabelEntry {
+  instanceId: string;
+  label: string;
+}
+
 export interface IStore {
   recordHeartbeat(payload: HeartbeatPayload): Promise<void>;
   getStats(): Promise<DashboardStats>;
   getInstances(limit?: number, offset?: number): Promise<{ instances: StoredInstance[]; total: number }>;
+  getInstanceLabels(): Promise<LabelEntry[]>;
+  setInstanceLabel(instanceId: string, label: string): Promise<void>;
+  prune(): Promise<number>;
+}
+
+export function getPruneThreshold(): number {
+  const days = Number(process.env.PRUNE_AFTER_DAYS) || 21;
+  return days * 24 * 60 * 60 * 1000;
 }

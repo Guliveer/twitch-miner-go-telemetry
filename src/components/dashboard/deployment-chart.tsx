@@ -15,11 +15,11 @@ interface DeploymentChartProps {
 }
 
 const COLORS = [
-  "hsl(var(--primary))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
 ];
 
 export function DeploymentChart({ data }: DeploymentChartProps) {
@@ -42,7 +42,7 @@ export function DeploymentChart({ data }: DeploymentChartProps) {
         <CardTitle className="text-sm font-medium">Deployment Type</CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={250}>
+        <ResponsiveContainer width="100%" height={250} className="[&_.recharts-text]:fill-foreground [&_.recharts-legend-item-text]:fill-foreground">
           <PieChart>
             <Pie
               data={data}
@@ -62,8 +62,18 @@ export function DeploymentChart({ data }: DeploymentChartProps) {
                 />
               ))}
             </Pie>
-            <Tooltip />
-            <Legend />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "var(--popover)",
+                color: "var(--popover-foreground)",
+                border: "1px solid var(--border)",
+                borderRadius: 0,
+                fontSize: 12,
+              }}
+            />
+            <Legend
+              wrapperStyle={{ color: "var(--foreground)", fontSize: 12 }}
+            />
           </PieChart>
         </ResponsiveContainer>
       </CardContent>

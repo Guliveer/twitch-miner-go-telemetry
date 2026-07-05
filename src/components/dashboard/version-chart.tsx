@@ -82,24 +82,48 @@ export function VersionChart({ data }: VersionChartProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={300} className="[&_.recharts-text]:fill-foreground [&_.recharts-cartesian-axis-tick-value]:fill-foreground">
           <BarChart
             data={sortedData}
             layout="vertical"
             margin={{ top: 0, right: 60, left: 0, bottom: 0 }}
           >
-            <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-            <XAxis type="number" tick={{ fontSize: 12 }} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              horizontal={false}
+              stroke="var(--border)"
+            />
+            <XAxis
+              type="number"
+              tick={{ fill: "var(--foreground)", fontSize: 12 }}
+              stroke="var(--border)"
+            />
             <YAxis
               type="category"
               dataKey="version"
               width={100}
-              tick={{ fontSize: 12, fontFamily: "var(--font-mono)" }}
+              tick={{
+                fill: "var(--foreground)",
+                fontSize: 12,
+                fontFamily: "var(--font-mono)",
+              }}
+              stroke="var(--border)"
             />
             <Tooltip
               formatter={(value) => [`${value} instances`, "Count"]}
+              contentStyle={{
+                backgroundColor: "var(--popover)",
+                color: "var(--popover-foreground)",
+                border: "1px solid var(--border)",
+                borderRadius: 0,
+                fontSize: 12,
+              }}
             />
-            <Bar dataKey="count" fill="hsl(var(--chart-1))" radius={[0, 3, 3, 0]} />
+            <Bar
+              dataKey="count"
+              fill="var(--chart-1)"
+              radius={[0, 3, 3, 0]}
+            />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

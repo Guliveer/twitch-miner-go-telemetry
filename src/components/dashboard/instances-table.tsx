@@ -209,7 +209,10 @@ export function InstancesTable({ instances }: InstancesTableProps) {
   const [sort, setSort] = useState<SortState>({ column: "lastSeen", direction: "desc" });
 
   const uniqueVersions = useMemo(
-    () => [...new Set(instances.map((i) => i.version))].sort(),
+    () =>
+      [...new Set(instances.map((i) => i.version))].sort((a, b) =>
+        b.localeCompare(a, undefined, { numeric: true }),
+      ),
     [instances],
   );
   const uniqueOs = useMemo(
@@ -233,7 +236,7 @@ export function InstancesTable({ instances }: InstancesTableProps) {
       result = result.filter(
         (i) =>
           i.instanceId.toLowerCase().includes(q) ||
-          i.label.toLowerCase().includes(q),
+          (i.label ?? "").toLowerCase().includes(q),
       );
     }
     if (filterVersion) {
@@ -269,7 +272,7 @@ export function InstancesTable({ instances }: InstancesTableProps) {
           cmp = a.lastSeen - b.lastSeen;
           break;
         case "label":
-          cmp = a.label.localeCompare(b.label);
+          cmp = (a.label ?? "").localeCompare(b.label ?? "");
           break;
         case "accounts":
           cmp = a.runningAccounts - b.runningAccounts;
@@ -318,7 +321,7 @@ export function InstancesTable({ instances }: InstancesTableProps) {
           <div className="relative flex-1 min-w-[160px] max-w-[240px]">
             <MagnifyingGlassIcon className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Search instance ID..."
+              placeholder="Search ID or label..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-7 pr-7"

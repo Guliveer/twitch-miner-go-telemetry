@@ -9,6 +9,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Cell,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { VersionStat } from "@/lib/types";
@@ -19,6 +20,26 @@ interface VersionChartProps {
 }
 
 type SortMode = "count" | "version";
+
+const GOLDEN_ANGLE = 137.508;
+
+function hashHue(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return ((Math.abs(hash) * GOLDEN_ANGLE) % 360);
+}
+
+function minorVersionColor(minor: string): string {
+  return `oklch(62% 0.17 ${hashHue(minor)})`;
+}
+
+function getMinorVersion(version: string): string {
+  const parts = version.replace(/^v/, "").split(".");
+  return parts.slice(0, 2).join(".");
+}
 
 export function VersionChart({ data }: VersionChartProps) {
   const [sortMode, setSortMode] = useState<SortMode>("version");
@@ -34,6 +55,11 @@ export function VersionChart({ data }: VersionChartProps) {
     }
     return sorted;
   }, [data, sortMode]);
+
+  const minorVersionColors = useMemo(() => {
+    const minors = [...new Set(data.map((d) => getMinorVersion(d.version)))];
+    return new Map(minors.map((v) => [v, minorVersionColor(v)]));
+  }, [data]);
 
   if (data.length === 0) {
     return (
@@ -123,9 +149,15 @@ export function VersionChart({ data }: VersionChartProps) {
             />
             <Bar
               dataKey="count"
-              fill="var(--chart-1)"
               radius={[0, 3, 3, 0]}
-            />
+            >
+              {sortedData.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={minorVersionColors.get(getMinorVersion(entry.version)) ?? "var(--chart-1)"}
+                />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

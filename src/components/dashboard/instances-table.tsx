@@ -496,7 +496,7 @@ export function InstancesTable({ instances }: InstancesTableProps) {
             ) : (
               filtered.map((inst) => (
                 <TableRow key={inst.instanceId} className={inst.ignored ? "opacity-50" : undefined}>
-                  <TableCell className="font-mono text-xs break-all max-w-[200px]">
+                  <TableCell className="font-mono text-xs break-all max-w-[200px] whitespace-normal">
                     {inst.instanceId}
                   </TableCell>
                   <TableCell>

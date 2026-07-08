@@ -13,8 +13,14 @@ export function LogoutButton() {
   }
 
   return (
-    <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Sign out">
-      <SignOut className="size-4" />
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={handleLogout}
+      aria-label="Sign out"
+      className="size-9 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150"
+    >
+      <SignOut className="size-4" weight="duotone" />
     </Button>
   );
 }

@@ -6,12 +6,10 @@ import {
   Bar,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { VersionStat } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +19,23 @@ interface VersionChartProps {
 
 type SortMode = "count" | "version";
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// BAR COLORS — DO NOT MODIFY THIS LOGIC
+// ═══════════════════════════════════════════════════════════════════════════════
+// Each major.minor pair gets a hue via golden angle (137.508°), the same
+// formula that distributes sunflower seeds — maximum dispersion for any
+// number of versions with minimal collision risk.
+//
+//   - 1.22.0 and 1.22.1 → same color (hash is "1.22")
+//   - 1.22.0 and 1.23.0 → different colors (different hash → different hue)
+//   - 1.22.0 and 2.22.0 → different colors
+//
+// Formula: oklch(68% 0.26 {hue})
+//
+// WARNING: Do not replace with a hardcoded palette. The golden angle scales
+// to arbitrary version count. Changing GOLDEN_ANGLE or hashHue breaks
+// all existing color assignments across page loads.
+// ═══════════════════════════════════════════════════════════════════════════════
 const GOLDEN_ANGLE = 137.508;
 
 function hashHue(str: string): number {
@@ -33,7 +48,7 @@ function hashHue(str: string): number {
 }
 
 function minorVersionColor(minor: string): string {
-  return `oklch(62% 0.17 ${hashHue(minor)})`;
+  return `oklch(68% 0.26 ${hashHue(minor)})`;
 }
 
 function getMinorVersion(version: string): string {
@@ -63,104 +78,102 @@ export function VersionChart({ data }: VersionChartProps) {
 
   if (data.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Version Distribution</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">No data yet</p>
-        </CardContent>
-      </Card>
+      <div className="border border-border p-6 md:p-8">
+        <p className="label-mono text-muted-foreground">Version Distribution</p>
+        <p className="text-sm text-muted-foreground mt-3 font-[450]">No data yet</p>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium">
-            Version Distribution
-          </CardTitle>
-          <div className="flex items-center gap-0.5 border border-input rounded-none text-xs">
+    <div className="border border-border p-6 md:p-8">
+      <div className="mb-6 md:mb-8">
+        <div className="flex items-center justify-between gap-4">
+          <p className="label-mono text-muted-foreground">Version Distribution</p>
+          <div className="flex gap-2">
             <button
               onClick={() => setSortMode("count")}
               className={cn(
-                "px-2 py-1 transition-colors",
+                "relative text-xs font-medium transition-colors duration-150 py-1",
                 sortMode === "count"
-                  ? "bg-accent text-accent-foreground"
+                  ? "text-foreground"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
               by count
+              {sortMode === "count" && (
+                <span className="absolute -bottom-px left-0 right-0 h-px bg-accent" />
+              )}
             </button>
             <button
               onClick={() => setSortMode("version")}
               className={cn(
-                "px-2 py-1 transition-colors",
+                "relative text-xs font-medium transition-colors duration-150 py-1",
                 sortMode === "version"
-                  ? "bg-accent text-accent-foreground"
+                  ? "text-foreground"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
               by version
+              {sortMode === "version" && (
+                <span className="absolute -bottom-px left-0 right-0 h-px bg-accent" />
+              )}
             </button>
           </div>
         </div>
-      </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={300} className="[&_.recharts-text]:fill-foreground [&_.recharts-cartesian-axis-tick-value]:fill-foreground">
-          <BarChart
-            data={sortedData}
-            layout="vertical"
-            margin={{ top: 0, right: 60, left: 0, bottom: 0 }}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              horizontal={false}
-              stroke="var(--border)"
-            />
-            <XAxis
-              type="number"
-              domain={[0, "dataMax"]}
-              allowDecimals={false}
-              tick={{ fill: "var(--foreground)", fontSize: 12 }}
-              stroke="var(--border)"
-            />
-            <YAxis
-              type="category"
-              dataKey="version"
-              width={100}
-              tick={{
-                fill: "var(--foreground)",
-                fontSize: 12,
-                fontFamily: "var(--font-mono)",
-              }}
-              stroke="var(--border)"
-            />
-            <Tooltip
-              formatter={(value) => [`${value} instances`, "Count"]}
-              contentStyle={{
-                backgroundColor: "var(--popover)",
-                color: "var(--popover-foreground)",
-                border: "1px solid var(--border)",
-                borderRadius: 0,
-                fontSize: 12,
-              }}
-            />
-            <Bar
-              dataKey="count"
-              radius={[0, 3, 3, 0]}
+      </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart
+              data={sortedData}
+              layout="vertical"
+              margin={{ top: 0, right: 60, left: 0, bottom: 0 }}
             >
-              {sortedData.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={minorVersionColors.get(getMinorVersion(entry.version)) ?? "var(--chart-1)"}
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>
+              <XAxis
+                type="number"
+                domain={[0, "dataMax"]}
+                allowDecimals={false}
+                tick={{ fontSize: 11, fill: "var(--muted-foreground)", fontFamily: "Inter Tight, system-ui, sans-serif" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                type="category"
+                dataKey="version"
+                width={100}
+                tick={{
+                  fontSize: 11,
+                  fill: "var(--muted-foreground)",
+                  fontFamily: "var(--font-mono)",
+                }}
+                axisLine={{ stroke: "currentColor", opacity: 0.04 }}
+                tickLine={{ stroke: "currentColor", opacity: 0.04 }}
+              />
+              <Tooltip
+                formatter={(value) => [`${value} instances`, "Count"]}
+                contentStyle={{
+                  backgroundColor: "var(--background)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius)",
+                  fontSize: 12,
+                  fontFamily: "Inter Tight, system-ui, sans-serif",
+                }}
+                labelStyle={{ color: "var(--foreground)", fontWeight: 600, marginBottom: 2 }}
+                itemStyle={{ color: "var(--muted-foreground)", fontSize: 12 }}
+                cursor={{ fill: "var(--accent)", opacity: 0.06 }}
+              />
+              <Bar
+                dataKey="count"
+                radius={[0, 4, 4, 0]}
+              >
+                {sortedData.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={minorVersionColors.get(getMinorVersion(entry.version)) ?? "var(--accent)"}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+    </div>
   );
 }

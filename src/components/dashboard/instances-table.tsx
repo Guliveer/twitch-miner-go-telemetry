@@ -10,10 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -116,7 +113,7 @@ function LabelCell({ instance }: { instance: StoredInstance }) {
 
   return (
     <button
-      className="text-xs text-left w-full hover:bg-muted/50 rounded px-1 py-0.5 transition-colors max-w-[280px]"
+      className="text-xs text-left w-full hover:bg-muted/50 rounded px-1 py-0.5 transition-colors max-w-[280px] text-foreground/85"
       onClick={() => {
         setValue(instance.label ?? "");
         setEditing(true);
@@ -352,50 +349,45 @@ export function InstancesTable({ instances }: InstancesTableProps) {
 
   if (instances.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Recent Instances</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">No data yet</p>
-        </CardContent>
-      </Card>
+      <div className="border border-border p-6 md:p-8">
+        <p className="label-mono text-muted-foreground">Recent Instances</p>
+        <p className="text-sm text-muted-foreground mt-3 font-[450]">No data yet</p>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <CardTitle className="text-sm font-medium">
-            Recent Instances
-            <span className="text-muted-foreground font-normal ml-1">
-              ({filtered.length}{hasFilters ? ` / ${instances.length}` : ""})
-            </span>
-            {ignoredCount > 0 && (
-              <span className="text-muted-foreground font-normal ml-1">
-                | {ignoredCount} ignored
-              </span>
-            )}
-          </CardTitle>
-          <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5">
+    <div className="border border-border">
+      <div className="px-6 md:px-8 pt-6 md:pt-8 pb-3">
+        <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+          <div>
+            <p className="label-mono text-muted-foreground">Recent Instances</p>
+            <p className="text-xs text-muted-foreground/60 mt-0.5 font-[450]">
+              {filtered.length}{hasFilters ? ` / ${instances.length}` : ""} instance{filtered.length !== 1 ? "s" : ""}
+              {ignoredCount > 0 && ` · ${ignoredCount} ignored`}
+            </p>
+          </div>
+          <button
+            onClick={exportCSV}
+            className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors duration-150 py-1"
+          >
             <DownloadIcon className="size-3.5" />
-            CSV
-          </Button>
+            <span className="label-mono text-[10px]">CSV</span>
+          </button>
         </div>
-        <div className="flex flex-wrap items-center gap-2 mt-2">
+        <div className="flex flex-wrap items-center gap-2 mt-3">
           <div className="relative flex-1 min-w-[160px] max-w-[240px]">
-            <MagnifyingGlassIcon className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+            <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
             <Input
               placeholder="Search ID or label..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-7 pr-7"
+              className="pl-8 pr-7"
             />
             {search && (
               <button
                 onClick={() => setSearch("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
               >
                 <XIcon className="size-3.5" />
               </button>
@@ -444,12 +436,12 @@ export function InstancesTable({ instances }: InstancesTableProps) {
             </SelectContent>
           </Select>
 
-          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none whitespace-nowrap">
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none whitespace-nowrap hover:text-foreground transition-colors">
             <input
               type="checkbox"
               checked={showIgnored}
               onChange={(e) => setShowIgnored(e.target.checked)}
-              className="size-3.5 accent-foreground"
+              className="size-3.5 accent-accent"
             />
             Show ignored
           </label>
@@ -469,8 +461,8 @@ export function InstancesTable({ instances }: InstancesTableProps) {
             </button>
           )}
         </div>
-      </CardHeader>
-      <CardContent className="p-0 overflow-x-auto">
+      </div>
+      <div className="overflow-x-auto -mx-px border-t border-border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -488,40 +480,40 @@ export function InstancesTable({ instances }: InstancesTableProps) {
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-8">
+                <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-12">
                   No instances match the current filters
                 </TableCell>
               </TableRow>
             ) : (
               filtered.map((inst) => (
-                <TableRow key={inst.instanceId} className={inst.ignored ? "opacity-50" : undefined}>
-                  <TableCell className="font-mono text-xs break-all max-w-[200px] whitespace-normal">
+                <TableRow key={inst.instanceId} className={`transition-colors hover:bg-muted/30 ${inst.ignored ? "opacity-40" : ""}`}>
+                  <TableCell className="font-mono text-xs break-all max-w-[200px] whitespace-normal text-foreground/85">
                     {inst.instanceId}
                   </TableCell>
                   <TableCell>
                     <LabelCell instance={inst} />
                   </TableCell>
-                  <TableCell className="text-sm whitespace-nowrap">
-                    <span className="tabular-nums">{inst.runningAccounts}</span>
+                  <TableCell className="text-sm whitespace-nowrap text-foreground/85">
+                    <span className="tabular-nums font-semibold">{inst.runningAccounts}</span>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="font-mono">
+                    <span className="font-mono text-xs border border-border px-2 py-0.5 text-foreground/75">
                       {inst.version}
-                    </Badge>
+                    </span>
                   </TableCell>
-                  <TableCell className="text-sm">{inst.os ?? "—"}</TableCell>
-                  <TableCell className="text-sm">{inst.deployment ?? "—"}</TableCell>
-                  <TableCell className="text-right text-sm tabular-nums">
+                  <TableCell className="text-sm text-foreground/75">{inst.os ?? "—"}</TableCell>
+                  <TableCell className="text-sm text-foreground/75">{inst.deployment ?? "—"}</TableCell>
+                  <TableCell className="text-right text-sm tabular-nums text-foreground/70">
                     <TimeSince timestamp={inst.firstSeen} />
                   </TableCell>
-                  <TableCell className="text-right text-sm tabular-nums">
+                  <TableCell className="text-right text-sm tabular-nums text-foreground/70">
                     <TimeSince timestamp={inst.lastSeen} />
                   </TableCell>
                   <TableCell>
                     <button
                       onClick={() => toggleIgnore(inst.instanceId, inst.ignored)}
                       disabled={toggling === inst.instanceId}
-                      className="p-1 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30"
+                      className="p-1.5 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 hover:bg-white/[0.04]"
                       title={inst.ignored ? "Include in analytics" : "Ignore in analytics"}
                     >
                       {inst.ignored ? (
@@ -536,7 +528,7 @@ export function InstancesTable({ instances }: InstancesTableProps) {
             )}
           </TableBody>
         </Table>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

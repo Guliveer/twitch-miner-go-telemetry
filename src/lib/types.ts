@@ -6,7 +6,6 @@ export interface HeartbeatPayload {
   deployment?: string;
   uptime_seconds?: number;
   running_accounts?: number;
-  total_configs?: number;
 }
 
 export interface StoredInstance {
@@ -18,7 +17,6 @@ export interface StoredInstance {
   firstSeen: number;
   lastSeen: number;
   runningAccounts: number;
-  totalConfigs: number;
   uptimeSeconds: number | null;
   label: string;
   ignored: boolean;
@@ -47,14 +45,12 @@ export interface DashboardStats {
   active24h: number;
   active7d: number;
   totalRunningAccounts: number;
-  totalConfiguredAccounts: number;
-  fullCapacityCount: number;
   versionDistribution: VersionStat[];
   osDistribution: { name: string; count: number }[];
   deploymentDistribution: { name: string; count: number }[];
   firstSeenDistribution: DailyCount[];
   uptimeByVersion: UptimeStat[];
-  accountsDistribution: { instanceId: string; running: number; total: number; label: string }[];
+  accountsDistribution: { instanceId: string; running: number; label: string }[];
   recentInstances: StoredInstance[];
 }
 

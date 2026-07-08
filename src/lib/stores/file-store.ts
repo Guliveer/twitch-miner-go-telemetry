@@ -124,7 +124,6 @@ export class FileStore implements IStore {
       if (payload.deployment) existing.deployment = payload.deployment;
       if (payload.uptime_seconds != null) existing.uptimeSeconds = payload.uptime_seconds;
       if (payload.running_accounts != null) existing.runningAccounts = payload.running_accounts;
-      if (payload.total_configs != null) existing.totalConfigs = payload.total_configs;
     } else {
       this.instances.set(payload.instance_id, {
         instanceId: payload.instance_id,
@@ -135,7 +134,6 @@ export class FileStore implements IStore {
         firstSeen: now,
         lastSeen: now,
         runningAccounts: payload.running_accounts ?? 0,
-        totalConfigs: payload.total_configs ?? 0,
         uptimeSeconds: payload.uptime_seconds ?? null,
         label: this.labels.get(payload.instance_id) ?? "",
         ignored: false,
@@ -223,17 +221,14 @@ export class FileStore implements IStore {
       .sort((a, b) => b.avgUptimeSeconds - a.avgUptimeSeconds);
 
     const totalRunningAccounts = tracked.reduce((s, i) => s + i.runningAccounts, 0);
-    const totalConfiguredAccounts = tracked.reduce((s, i) => s + i.totalConfigs, 0);
-    const fullCapacityCount = tracked.filter((i) => i.runningAccounts > 0 && i.runningAccounts === i.totalConfigs).length;
 
     const accountsDistribution = tracked
       .map((inst) => ({
         instanceId: inst.instanceId,
         running: inst.runningAccounts,
-        total: inst.totalConfigs,
         label: inst.label,
       }))
-      .sort((a, b) => b.total - a.total)
+      .sort((a, b) => b.running - a.running)
       .slice(0, 30);
 
     // All instances sorted: non-ignored first (by lastSeen desc), then ignored (by lastSeen desc)
@@ -241,7 +236,6 @@ export class FileStore implements IStore {
       .map((inst) => ({
         ...inst,
         runningAccounts: inst.runningAccounts ?? 0,
-        totalConfigs: inst.totalConfigs ?? 0,
       }))
       .sort((a, b) => {
         if (a.ignored !== b.ignored) return a.ignored ? 1 : -1;
@@ -255,8 +249,6 @@ export class FileStore implements IStore {
       active24h,
       active7d,
       totalRunningAccounts,
-      totalConfiguredAccounts,
-      fullCapacityCount,
       versionDistribution,
       osDistribution,
       deploymentDistribution,
@@ -274,7 +266,6 @@ export class FileStore implements IStore {
       .map((inst) => ({
         ...inst,
         runningAccounts: inst.runningAccounts ?? 0,
-        totalConfigs: inst.totalConfigs ?? 0,
         label: this.labels.get(inst.instanceId) ?? inst.label,
       }))
       .sort((a, b) => {

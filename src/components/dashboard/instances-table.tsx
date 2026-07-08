@@ -319,7 +319,7 @@ export function InstancesTable({ instances }: InstancesTableProps) {
   const ignoredCount = useMemo(() => instances.filter((i) => i.ignored).length, [instances]);
 
   function exportCSV() {
-    const headers = ["Instance ID", "Label", "Version", "OS", "Arch", "Deployment", "First Seen", "Last Seen", "Running Accounts", "Total Configs", "Ignored"];
+    const headers = ["Instance ID", "Label", "Version", "OS", "Arch", "Deployment", "First Seen", "Last Seen", "Running Accounts", "Ignored"];
     const rows = instances.map((inst) => [
       inst.instanceId,
       inst.label,
@@ -330,7 +330,6 @@ export function InstancesTable({ instances }: InstancesTableProps) {
       new Date(inst.firstSeen).toISOString(),
       new Date(inst.lastSeen).toISOString(),
       String(inst.runningAccounts),
-      String(inst.totalConfigs),
       inst.ignored ? "yes" : "no",
     ]);
 
@@ -504,8 +503,6 @@ export function InstancesTable({ instances }: InstancesTableProps) {
                   </TableCell>
                   <TableCell className="text-sm whitespace-nowrap">
                     <span className="tabular-nums">{inst.runningAccounts}</span>
-                    <span className="text-muted-foreground"> / </span>
-                    <span className="tabular-nums text-muted-foreground">{inst.totalConfigs}</span>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="font-mono">

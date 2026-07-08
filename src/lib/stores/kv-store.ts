@@ -40,7 +40,6 @@ export class UpstashRedisStore implements IStore {
         deployment: payload.deployment ?? existingRaw.deployment,
         uptimeSeconds: payload.uptime_seconds ?? existingRaw.uptimeSeconds,
         runningAccounts: payload.running_accounts ?? existingRaw.runningAccounts,
-        totalConfigs: payload.total_configs ?? existingRaw.totalConfigs,
       };
       await kv.set(instanceKey(payload.instance_id), updated);
     } else {
@@ -54,7 +53,6 @@ export class UpstashRedisStore implements IStore {
         firstSeen: now,
         lastSeen: now,
         runningAccounts: payload.running_accounts ?? 0,
-        totalConfigs: payload.total_configs ?? 0,
         uptimeSeconds: payload.uptime_seconds ?? null,
         label: existingLabel,
         ignored: false,
@@ -89,8 +87,6 @@ export class UpstashRedisStore implements IStore {
         active24h: 0,
         active7d: 0,
         totalRunningAccounts: 0,
-        totalConfiguredAccounts: 0,
-        fullCapacityCount: 0,
         versionDistribution: [],
         osDistribution: [],
         deploymentDistribution: [],
@@ -109,7 +105,6 @@ export class UpstashRedisStore implements IStore {
       .map((i) => ({
         ...i,
         runningAccounts: i.runningAccounts ?? 0,
-        totalConfigs: i.totalConfigs ?? 0,
       }));
 
     const tracked = instances.filter((i) => !i.ignored);
@@ -176,17 +171,14 @@ export class UpstashRedisStore implements IStore {
       .sort((a, b) => b.avgUptimeSeconds - a.avgUptimeSeconds);
 
     const totalRunningAccounts = tracked.reduce((s, i) => s + i.runningAccounts, 0);
-    const totalConfiguredAccounts = tracked.reduce((s, i) => s + i.totalConfigs, 0);
-    const fullCapacityCount = tracked.filter((i) => i.runningAccounts > 0 && i.runningAccounts === i.totalConfigs).length;
 
     const accountsDistribution = tracked
       .map((inst) => ({
         instanceId: inst.instanceId,
         running: inst.runningAccounts,
-        total: inst.totalConfigs,
         label: inst.label,
       }))
-      .sort((a, b) => b.total - a.total)
+      .sort((a, b) => b.running - a.running)
       .slice(0, 30);
 
     const recentInstances = [...instances]
@@ -208,8 +200,6 @@ export class UpstashRedisStore implements IStore {
       active24h,
       active7d,
       totalRunningAccounts,
-      totalConfiguredAccounts,
-      fullCapacityCount,
       versionDistribution,
       osDistribution,
       deploymentDistribution,
@@ -233,7 +223,6 @@ export class UpstashRedisStore implements IStore {
       .map((i) => ({
         ...i,
         runningAccounts: i.runningAccounts ?? 0,
-        totalConfigs: i.totalConfigs ?? 0,
       }));
 
     instances.sort((a, b) => {

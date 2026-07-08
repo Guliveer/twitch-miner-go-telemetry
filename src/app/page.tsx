@@ -36,8 +36,6 @@ export default async function Dashboard() {
         <FirstSeenChart data={stats.firstSeenDistribution} />
         <AccountsCard
           totalRunning={stats.totalRunningAccounts}
-          totalConfigured={stats.totalConfiguredAccounts}
-          fullCapacityCount={stats.fullCapacityCount}
         />
       </div>
 

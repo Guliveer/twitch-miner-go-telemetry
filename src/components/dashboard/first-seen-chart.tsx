@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from "react";
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -33,18 +33,24 @@ interface FirstSeenChartProps {
 export function FirstSeenChart({ data }: FirstSeenChartProps) {
   const [range, setRange] = useState<RangeLabel>("21d");
 
-  const filtered = useMemo(() => {
+  const chartData = useMemo(() => {
+    let running = 0;
+    const enriched = data.map((d) => {
+      running += d.count;
+      return { ...d, cumulative: running };
+    });
+
     const selected = RANGES.find((r) => r.label === range);
-    if (!selected || selected.days === Infinity) return data;
+    if (!selected || selected.days === Infinity) return enriched;
     const cutoff = Date.now() - selected.days * 24 * 60 * 60 * 1000;
-    return data.filter((d) => new Date(d.date).getTime() >= cutoff);
+    return enriched.filter((d) => new Date(d.date).getTime() >= cutoff);
   }, [data, range]);
 
   if (data.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium">Instances Created Over Time</CardTitle>
+          <CardTitle className="text-sm font-medium">Total Instances Over Time</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">No data yet</p>
@@ -57,7 +63,7 @@ export function FirstSeenChart({ data }: FirstSeenChartProps) {
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium">Instances Created Over Time</CardTitle>
+          <CardTitle className="text-sm font-medium">Total Instances Over Time</CardTitle>
           <div className="flex gap-0.5">
             {RANGES.map((r) => (
               <button
@@ -77,8 +83,8 @@ export function FirstSeenChart({ data }: FirstSeenChartProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={200} className="[&_.recharts-text]:fill-foreground">
-          <LineChart data={filtered} margin={{ top: 0, right: 8, left: -16, bottom: 0 }}>
+        <ResponsiveContainer width="100%" height={250} className="[&_.recharts-text]:fill-foreground">
+          <AreaChart data={chartData} margin={{ top: 0, right: 8, left: -16, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
             <XAxis
               dataKey="date"
@@ -96,7 +102,7 @@ export function FirstSeenChart({ data }: FirstSeenChartProps) {
             />
             <Tooltip
               labelFormatter={(label) => String(label)}
-              formatter={(value) => [`${value} instance(s)`, "New"]}
+              formatter={(value) => [`${value}`, "Total"]}
               contentStyle={{
                 backgroundColor: "var(--popover)",
                 color: "var(--popover-foreground)",
@@ -105,14 +111,16 @@ export function FirstSeenChart({ data }: FirstSeenChartProps) {
                 fontSize: 12,
               }}
             />
-            <Line
+            <Area
               type="monotone"
-              dataKey="count"
+              dataKey="cumulative"
               stroke="var(--chart-2)"
               strokeWidth={2}
+              fill="var(--chart-2)"
+              fillOpacity={0.15}
               dot={false}
             />
-          </LineChart>
+          </AreaChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>

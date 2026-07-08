@@ -8,6 +8,7 @@ interface StatsCardsProps {
   active1h: number;
   active24h: number;
   active7d: number;
+  totalRunning: number;
 }
 
 function StatCard({
@@ -38,6 +39,7 @@ export function StatsCards({
   active1h,
   active24h,
   active7d,
+  totalRunning,
 }: StatsCardsProps) {
   return (
     <div className="flex flex-wrap gap-3">
@@ -45,6 +47,7 @@ export function StatsCards({
       <StatCard label="Active (1h)" value={active1h} />
       <StatCard label="Active (24h)" value={active24h} />
       <StatCard label="Active (7d)" value={active7d} />
+      <StatCard label="Running Accounts" value={totalRunning} />
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { OSChart } from "@/components/dashboard/os-chart";
 import { DeploymentChart } from "@/components/dashboard/deployment-chart";
 import { InstancesTable } from "@/components/dashboard/instances-table";
 import { FirstSeenChart } from "@/components/dashboard/first-seen-chart";
-import { AccountsCard } from "@/components/dashboard/accounts-card";
+
 import { VersionDisclaimer } from "@/components/dashboard/version-disclaimer";
 
 export const dynamic = "force-dynamic";
@@ -30,14 +30,10 @@ export default async function Dashboard() {
         active1h={stats.active1h}
         active24h={stats.active24h}
         active7d={stats.active7d}
+        totalRunning={stats.totalRunningAccounts}
       />
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <FirstSeenChart data={stats.firstSeenDistribution} />
-        <AccountsCard
-          totalRunning={stats.totalRunningAccounts}
-        />
-      </div>
+      <FirstSeenChart data={stats.firstSeenDistribution} />
 
       <VersionChart data={stats.versionDistribution} />
 

@@ -79,6 +79,10 @@ export interface IStore {
   prune(): Promise<number>;
 }
 
+export function isSemver(version: string): boolean {
+  return /^\d+\.\d+\.\d+$/.test(version);
+}
+
 export function getPruneThreshold(): number {
   const days = Number(process.env.PRUNE_AFTER_DAYS) || 21;
   return days * 24 * 60 * 60 * 1000;

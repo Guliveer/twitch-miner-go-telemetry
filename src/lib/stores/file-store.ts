@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { DashboardStats, DailyCount, HeartbeatPayload, IStore, LabelEntry, StoredInstance, UptimeStat, VersionStat } from "../types";
-import { getPruneThreshold } from "../types";
+import { getPruneThreshold, isSemver } from "../types";
 
 function getDataDir(): string {
   return process.env.DATA_DIR ?? path.join(process.cwd(), ".data");
@@ -160,13 +160,14 @@ export class FileStore implements IStore {
 
     const instances = [...this.instances.values()];
     const tracked = instances.filter((i) => !i.ignored);
-    const total = tracked.length;
-    const active1h = tracked.filter((i) => now - i.lastSeen < oneHour).length;
-    const active24h = tracked.filter((i) => now - i.lastSeen < oneDay).length;
-    const active7d = tracked.filter((i) => now - i.lastSeen < sevenDays).length;
+    const versionFiltered = tracked.filter((i) => isSemver(i.version));
+    const total = versionFiltered.length;
+    const active1h = versionFiltered.filter((i) => now - i.lastSeen < oneHour).length;
+    const active24h = versionFiltered.filter((i) => now - i.lastSeen < oneDay).length;
+    const active7d = versionFiltered.filter((i) => now - i.lastSeen < sevenDays).length;
 
     const versionCounts = new Map<string, number>();
-    for (const inst of tracked) {
+    for (const inst of versionFiltered) {
       versionCounts.set(inst.version, (versionCounts.get(inst.version) ?? 0) + 1);
     }
     const versionDistribution: VersionStat[] = [...versionCounts.entries()]
@@ -178,7 +179,7 @@ export class FileStore implements IStore {
       .sort((a, b) => b.count - a.count);
 
     const osCounts = new Map<string, number>();
-    for (const inst of tracked) {
+    for (const inst of versionFiltered) {
       const key = inst.os ?? "unknown";
       osCounts.set(key, (osCounts.get(key) ?? 0) + 1);
     }
@@ -187,7 +188,7 @@ export class FileStore implements IStore {
       .sort((a, b) => b.count - a.count);
 
     const depCounts = new Map<string, number>();
-    for (const inst of tracked) {
+    for (const inst of versionFiltered) {
       const key = inst.deployment ?? "unknown";
       depCounts.set(key, (depCounts.get(key) ?? 0) + 1);
     }
@@ -196,7 +197,7 @@ export class FileStore implements IStore {
       .sort((a, b) => b.count - a.count);
 
     const firstSeenBuckets = new Map<string, number>();
-    for (const inst of tracked) {
+    for (const inst of versionFiltered) {
       const date = new Date(inst.firstSeen).toISOString().slice(0, 10);
       firstSeenBuckets.set(date, (firstSeenBuckets.get(date) ?? 0) + 1);
     }
@@ -205,7 +206,7 @@ export class FileStore implements IStore {
       .sort((a, b) => a.date.localeCompare(b.date));
 
     const uptimeByVersionMap = new Map<string, { sum: number; count: number }>();
-    for (const inst of tracked) {
+    for (const inst of versionFiltered) {
       if (inst.uptimeSeconds == null) continue;
       const entry = uptimeByVersionMap.get(inst.version) ?? { sum: 0, count: 0 };
       entry.sum += inst.uptimeSeconds;
@@ -220,9 +221,9 @@ export class FileStore implements IStore {
       }))
       .sort((a, b) => b.avgUptimeSeconds - a.avgUptimeSeconds);
 
-    const totalRunningAccounts = tracked.reduce((s, i) => s + i.runningAccounts, 0);
+    const totalRunningAccounts = versionFiltered.reduce((s, i) => s + i.runningAccounts, 0);
 
-    const accountsDistribution = tracked
+    const accountsDistribution = versionFiltered
       .map((inst) => ({
         instanceId: inst.instanceId,
         running: inst.runningAccounts,

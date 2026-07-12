@@ -38,15 +38,6 @@ export function OSChart({ data }: OSChartProps) {
       <p className="label-mono text-muted-foreground mb-6">Operating Systems</p>
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
-              <text
-                x="50%" y="50%"
-                textAnchor="middle" dominantBaseline="middle"
-                fill="var(--foreground)"
-                fontSize={24} fontWeight={700}
-                fontFamily="var(--font-mono)"
-              >
-                {total.toLocaleString()}
-              </text>
               <Pie
                 data={data}
                 dataKey="count"
@@ -55,6 +46,19 @@ export function OSChart({ data }: OSChartProps) {
                 innerRadius={52}
                 outerRadius={80}
                 paddingAngle={2}
+                label={({ x, y, name, percent, textAnchor }) => (
+                  <text
+                    x={x} y={y}
+                    textAnchor={textAnchor}
+                    dominantBaseline="central"
+                    fontSize={12}
+                    fontFamily="Inter Tight, system-ui, sans-serif"
+                    fill="var(--muted-foreground)"
+                  >
+                    {`${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                  </text>
+                )}
+                labelLine={{ stroke: "var(--muted-foreground)", strokeWidth: 1 }}
               >
                 {data.map((_, index) => (
                   <Cell

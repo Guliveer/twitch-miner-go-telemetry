@@ -49,6 +49,8 @@ export interface DashboardStats {
   osDistribution: { name: string; count: number }[];
   deploymentDistribution: { name: string; count: number }[];
   firstSeenDistribution: DailyCount[];
+  firstSeenByOs: Record<string, DailyCount[]>;
+  firstSeenByDeployment: Record<string, DailyCount[]>;
   uptimeByVersion: UptimeStat[];
   accountsDistribution: { instanceId: string; running: number; label: string }[];
   recentInstances: StoredInstance[];

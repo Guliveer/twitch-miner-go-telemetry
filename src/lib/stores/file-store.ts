@@ -205,6 +205,37 @@ export class FileStore implements IStore {
       .map(([date, count]) => ({ date, count }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
+    const firstSeenByOs: Record<string, DailyCount[]> = {};
+    const firstSeenByDeployment: Record<string, DailyCount[]> = {};
+    for (const inst of versionFiltered) {
+      const date = new Date(inst.firstSeen).toISOString().slice(0, 10);
+      const osKey = inst.os ?? "unknown";
+      if (!firstSeenByOs[osKey]) firstSeenByOs[osKey] = [];
+      const osBucket = firstSeenByOs[osKey];
+      const osExisting = osBucket.find((b) => b.date === date);
+      if (osExisting) {
+        osExisting.count++;
+      } else {
+        osBucket.push({ date, count: 1 });
+      }
+
+      const depKey = inst.deployment ?? "unknown";
+      if (!firstSeenByDeployment[depKey]) firstSeenByDeployment[depKey] = [];
+      const depBucket = firstSeenByDeployment[depKey];
+      const depExisting = depBucket.find((b) => b.date === date);
+      if (depExisting) {
+        depExisting.count++;
+      } else {
+        depBucket.push({ date, count: 1 });
+      }
+    }
+    for (const key of Object.keys(firstSeenByOs)) {
+      firstSeenByOs[key].sort((a, b) => a.date.localeCompare(b.date));
+    }
+    for (const key of Object.keys(firstSeenByDeployment)) {
+      firstSeenByDeployment[key].sort((a, b) => a.date.localeCompare(b.date));
+    }
+
     const uptimeByVersionMap = new Map<string, { sum: number; count: number }>();
     for (const inst of versionFiltered) {
       if (inst.uptimeSeconds == null) continue;
@@ -254,6 +285,8 @@ export class FileStore implements IStore {
       osDistribution,
       deploymentDistribution,
       firstSeenDistribution,
+      firstSeenByOs,
+      firstSeenByDeployment,
       uptimeByVersion,
       accountsDistribution,
       recentInstances,

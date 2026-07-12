@@ -20,35 +20,31 @@ interface VersionChartProps {
 type SortMode = "count" | "version";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// BAR COLORS — DO NOT MODIFY THIS LOGIC
+// BAR COLORS
 // ═══════════════════════════════════════════════════════════════════════════════
-// Each major.minor pair gets a hue via golden angle (137.508°), the same
-// formula that distributes sunflower seeds — maximum dispersion for any
-// number of versions with minimal collision risk.
-//
-//   - 1.22.0 and 1.22.1 → same color (hash is "1.22")
-//   - 1.22.0 and 1.23.0 → different colors (different hash → different hue)
-//   - 1.22.0 and 2.22.0 → different colors
-//
-// Formula: oklch(68% 0.26 {hue})
-//
-// WARNING: Do not replace with a hardcoded palette. The golden angle scales
-// to arbitrary version count. Changing GOLDEN_ANGLE or hashHue breaks
-// all existing color assignments across page loads.
+// Cycles through the site's chart palette (chart-1..chart-5 from globals.css).
+// Each major.minor pair maps deterministically to one of the 5 colors so
+// that 1.22.0 and 1.22.1 share the same color, while 1.22.x and 1.23.x differ.
 // ═══════════════════════════════════════════════════════════════════════════════
-const GOLDEN_ANGLE = 137.508;
+const CHART_PALETTE = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+];
 
-function hashHue(str: string): number {
+function hashIndex(str: string, mod: number): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = ((hash << 5) - hash) + str.charCodeAt(i);
     hash |= 0;
   }
-  return ((Math.abs(hash) * GOLDEN_ANGLE) % 360);
+  return Math.abs(hash) % mod;
 }
 
 function minorVersionColor(minor: string): string {
-  return `oklch(68% 0.26 ${hashHue(minor)})`;
+  return CHART_PALETTE[hashIndex(minor, CHART_PALETTE.length)];
 }
 
 function getMinorVersion(version: string): string {

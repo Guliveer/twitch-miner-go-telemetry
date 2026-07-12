@@ -1,14 +1,14 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { PieChart } from "@/components/charts/pie-chart";
+import PieSlice from "@/components/charts/pie-slice";
+import PieCenter from "@/components/charts/pie-center";
 import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
+  ChartLegendHoverProvider,
+  useChartLegendHover,
+} from "@/components/charts/chart-legend-hover";
+
 interface OSChartProps {
   data: { name: string; count: number }[];
 }
@@ -21,8 +21,48 @@ const DONUT_PALETTE = [
   "oklch(0.63 0.28 290)",   // purple
 ];
 
+function OSLegend({ data }: { data: { label: string; value: number; color: string }[] }) {
+  const { hoveredIndex, setHoveredIndex } = useChartLegendHover();
+
+  return (
+    <div className="flex flex-wrap justify-center gap-4 pt-4">
+      {data.map((item, index) => {
+        const isFaded = hoveredIndex !== null && hoveredIndex !== index;
+        return (
+          <button
+            key={item.label}
+            onMouseEnter={() => setHoveredIndex(index)}
+            onMouseLeave={() => setHoveredIndex(null)}
+            className="flex items-center gap-1.5 text-xs transition-colors hover:text-foreground"
+            style={{ color: isFaded ? "var(--muted-foreground)" : "var(--foreground)", opacity: isFaded ? 0.4 : 1 }}
+          >
+            <span
+              className="inline-block size-2 rounded-full shrink-0"
+              style={{ backgroundColor: item.color }}
+            />
+            <span>{item.label}</span>
+            <span className="font-mono font-medium tabular-nums">
+              {item.value.toLocaleString()}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function OSChart({ data }: OSChartProps) {
-  const total = useMemo(() => data.reduce((s, d) => s + d.count, 0), [data]);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  const chartData = useMemo(
+    () =>
+      data.map((d, i) => ({
+        label: d.name,
+        value: d.count,
+        color: DONUT_PALETTE[i % DONUT_PALETTE.length],
+      })),
+    [data],
+  );
 
   if (data.length === 0) {
     return (
@@ -36,53 +76,24 @@ export function OSChart({ data }: OSChartProps) {
   return (
     <div className="border border-border p-6 md:p-8">
       <p className="label-mono text-muted-foreground mb-6">Operating Systems</p>
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie
-                data={data}
-                dataKey="count"
-                nameKey="name"
-                cx="50%" cy="50%"
-                innerRadius={52}
-                outerRadius={80}
-                paddingAngle={2}
-                label={({ x, y, name, percent, textAnchor }) => (
-                  <text
-                    x={x} y={y}
-                    textAnchor={textAnchor}
-                    dominantBaseline="central"
-                    fontSize={12}
-                    fontFamily="Inter Tight, system-ui, sans-serif"
-                    fill="var(--muted-foreground)"
-                  >
-                    {`${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-                  </text>
-                )}
-                labelLine={{ stroke: "var(--muted-foreground)", strokeWidth: 1 }}
-              >
-                {data.map((_, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={DONUT_PALETTE[index % DONUT_PALETTE.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "var(--background)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "var(--radius)",
-                  fontSize: 12,
-                  fontFamily: "Inter Tight, system-ui, sans-serif",
-                }}
-                labelStyle={{ color: "var(--foreground)", fontWeight: 600, marginBottom: 2 }}
-                itemStyle={{ color: "var(--muted-foreground)", fontSize: 12 }}
-              />
-              <Legend
-                wrapperStyle={{ color: "var(--foreground)", fontSize: 12, fontFamily: "Inter Tight, system-ui, sans-serif", paddingTop: 8 }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
+      <div className="flex flex-col items-center">
+        <ChartLegendHoverProvider hoveredIndex={hoveredIndex} onHoverChange={setHoveredIndex}>
+          <PieChart
+            data={chartData}
+            size={250}
+            innerRadius={78}
+            padAngle={0.035}
+            hoveredIndex={hoveredIndex}
+            onHoverChange={setHoveredIndex}
+          >
+            {chartData.map((_, index) => (
+              <PieSlice key={index} index={index} hoverEffect="translate" />
+            ))}
+            <PieCenter defaultLabel="Total" />
+          </PieChart>
+          <OSLegend data={chartData} />
+        </ChartLegendHoverProvider>
+      </div>
     </div>
   );
 }

@@ -40,7 +40,11 @@ export default async function Dashboard() {
 
       {/* First seen chart */}
       <div style={{ animation: "fade-in-up 0.5s cubic-bezier(0.25, 0, 0, 1) 0.16s both" }}>
-        <FirstSeenChart data={stats.firstSeenDistribution} />
+        <FirstSeenChart
+          data={stats.firstSeenDistribution}
+          dataByOs={stats.firstSeenByOs}
+          dataByDeployment={stats.firstSeenByDeployment}
+        />
       </div>
 
       {/* Version chart */}

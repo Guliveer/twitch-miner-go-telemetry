@@ -37,29 +37,6 @@ const SERIES_PALETTE = [
   "var(--chart-5)",
 ];
 
-function buildCumulativeMap(series: Record<string, DailyCount[]>): Map<string, number>[] {
-  const allDates = new Set<string>();
-  for (const daily of Object.values(series)) {
-    for (const entry of daily) allDates.add(entry.date);
-  }
-  const sortedDates = [...allDates].sort();
-
-  const seriesNames = Object.keys(series);
-  const cumulativeMaps: Map<string, number>[] = seriesNames.map(() => new Map<string, number>());
-
-  for (const date of sortedDates) {
-    for (let s = 0; s < seriesNames.length; s++) {
-      const daily = series[seriesNames[s]];
-      const entry = daily?.find((d) => d.date === date);
-      const prev = s === 0 ? 0 : (cumulativeMaps[s].get(sortedDates[sortedDates.indexOf(date) - 1]) ?? 0);
-      const prevForSeries = cumulativeMaps[s].get(date) ?? 0;
-      cumulativeMaps[s].set(date, prevForSeries + (entry?.count ?? 0));
-    }
-  }
-
-  return cumulativeMaps;
-}
-
 function mergeSplitData(
   series: Record<string, DailyCount[]>,
 ): { data: Record<string, unknown>[]; seriesNames: string[] } {
@@ -75,11 +52,13 @@ function mergeSplitData(
 
   const data: Record<string, unknown>[] = sortedDates.map((date) => {
     const row: Record<string, unknown> = { date: new Date(date) };
+    let cumulative = 0;
     for (const name of seriesNames) {
       const daily = series[name];
       const entry = daily?.find((d) => d.date === date);
       if (entry) runningTotals.set(name, (runningTotals.get(name) ?? 0) + entry.count);
-      row[name] = runningTotals.get(name) ?? 0;
+      cumulative += runningTotals.get(name) ?? 0;
+      row[name] = cumulative;
     }
     return row;
   });
@@ -225,11 +204,16 @@ export function FirstSeenChart({ data, dataByOs = {}, dataByDeployment = {} }: F
                 { label: "Total", value: (point.cumulative as number).toLocaleString(), color: "var(--chart-line-primary)" },
               ];
             }
-            return topSeries.map((name) => ({
-              label: name,
-              value: (point[name] as number)?.toLocaleString() ?? "0",
-              color: SERIES_PALETTE[topSeries.indexOf(name) % SERIES_PALETTE.length],
-            }));
+            return topSeries.map((name, i) => {
+              const cumulative = (point[name] as number) ?? 0;
+              const prev = i > 0 ? ((point[topSeries[i - 1]] as number) ?? 0) : 0;
+              const individual = cumulative - prev;
+              return {
+                label: name,
+                value: individual.toLocaleString(),
+                color: SERIES_PALETTE[i % SERIES_PALETTE.length],
+              };
+            });
           }}
         />
       </AreaChart>

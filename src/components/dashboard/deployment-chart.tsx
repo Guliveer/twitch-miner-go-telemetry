@@ -14,11 +14,11 @@ interface DeploymentChartProps {
 }
 
 const DONUT_PALETTE = [
-  "oklch(0.68 0.3 35)",     // vermillion (accent)
-  "oklch(0.65 0.28 230)",   // blue
-  "oklch(0.66 0.24 170)",   // teal
-  "oklch(0.67 0.28 55)",    // gold
-  "oklch(0.63 0.28 290)",   // purple
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
 ];
 
 function DeploymentLegend({ data }: { data: { label: string; value: number; color: string }[] }) {

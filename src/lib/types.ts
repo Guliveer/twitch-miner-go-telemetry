@@ -39,6 +39,12 @@ export interface VersionStat {
   percentage: number;
 }
 
+export interface ActivityHeatmapEntry {
+  day: number;
+  hour: number;
+  count: number;
+}
+
 export interface DashboardStats {
   totalInstances: number;
   active1h: number;
@@ -47,6 +53,7 @@ export interface DashboardStats {
   totalRunningAccounts: number;
   versionDistribution: VersionStat[];
   osDistribution: { name: string; count: number }[];
+  archDistribution: { name: string; count: number }[];
   deploymentDistribution: { name: string; count: number }[];
   firstSeenDistribution: DailyCount[];
   firstSeenByOs: Record<string, DailyCount[]>;
@@ -54,6 +61,8 @@ export interface DashboardStats {
   uptimeByVersion: UptimeStat[];
   accountsDistribution: { instanceId: string; running: number; label: string }[];
   recentInstances: StoredInstance[];
+  activityHeatmap: ActivityHeatmapEntry[];
+  newInstanceByVersion: Record<string, DailyCount[]>;
 }
 
 export interface InstancesResponse {
@@ -71,6 +80,17 @@ export interface LabelEntry {
   label: string;
 }
 
+export interface VersionHistoryEntry {
+  instanceId: string;
+  version: string;
+  lastSeen: number;
+}
+
+export interface VersionHistoryDay {
+  date: string;
+  versions: Record<string, number>;
+}
+
 export interface IStore {
   recordHeartbeat(payload: HeartbeatPayload): Promise<void>;
   getStats(): Promise<DashboardStats>;
@@ -78,6 +98,7 @@ export interface IStore {
   getInstanceLabels(): Promise<LabelEntry[]>;
   setInstanceLabel(instanceId: string, label: string): Promise<void>;
   setInstanceIgnored(instanceId: string, ignored: boolean): Promise<void>;
+  getVersionHistory(): Promise<VersionHistoryEntry[]>;
   prune(): Promise<number>;
 }
 

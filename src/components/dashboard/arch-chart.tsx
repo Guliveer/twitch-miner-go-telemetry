@@ -9,7 +9,7 @@ import {
   useChartLegendHover,
 } from "@/components/charts/chart-legend-hover";
 
-interface OSChartProps {
+interface ArchChartProps {
   data: { name: string; count: number }[];
 }
 
@@ -21,7 +21,7 @@ const DONUT_PALETTE = [
   "var(--chart-5)",
 ];
 
-function OSLegend({ data }: { data: { label: string; value: number; color: string }[] }) {
+function ArchLegend({ data }: { data: { label: string; value: number; color: string }[] }) {
   const { hoveredIndex, setHoveredIndex } = useChartLegendHover();
 
   return (
@@ -51,7 +51,7 @@ function OSLegend({ data }: { data: { label: string; value: number; color: strin
   );
 }
 
-export function OSChart({ data }: OSChartProps) {
+export function ArchChart({ data }: ArchChartProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const chartData = useMemo(
@@ -67,7 +67,7 @@ export function OSChart({ data }: OSChartProps) {
   if (data.length === 0) {
     return (
       <div className="border border-border p-6 md:p-8">
-        <p className="label-mono text-muted-foreground">Operating Systems</p>
+        <p className="label-mono text-muted-foreground">Architecture</p>
         <p className="text-sm text-muted-foreground mt-3 font-[450]">No data yet</p>
       </div>
     );
@@ -75,7 +75,7 @@ export function OSChart({ data }: OSChartProps) {
 
   return (
     <div className="border border-border p-6 md:p-8">
-      <p className="label-mono text-muted-foreground mb-6">Operating Systems</p>
+      <p className="label-mono text-muted-foreground mb-6">Architecture</p>
       <div className="flex flex-col items-center">
         <ChartLegendHoverProvider hoveredIndex={hoveredIndex} onHoverChange={setHoveredIndex}>
           <PieChart
@@ -91,7 +91,7 @@ export function OSChart({ data }: OSChartProps) {
             ))}
             <PieCenter percent />
           </PieChart>
-          <OSLegend data={chartData} />
+          <ArchLegend data={chartData} />
         </ChartLegendHoverProvider>
       </div>
     </div>

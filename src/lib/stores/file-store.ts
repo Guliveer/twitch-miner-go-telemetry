@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { DashboardStats, DailyCount, HeartbeatPayload, IStore, LabelEntry, StoredInstance, UptimeStat, VersionStat } from "../types";
+import type { ActivityHeatmapEntry, DashboardStats, DailyCount, HeartbeatPayload, IStore, LabelEntry, StoredInstance, UptimeStat, VersionHistoryEntry, VersionStat } from "../types";
 import { getPruneThreshold, isSemver } from "../types";
 
 function getDataDir(): string {
@@ -37,6 +37,7 @@ async function getLabelsPath(): Promise<string> {
 export class FileStore implements IStore {
   private instances = new Map<string, StoredInstance>();
   private labels = new Map<string, string>();
+  private versionHistory = new Map<string, Map<string, number>>();
   private loaded = false;
   private writeScheduled = false;
   private labelsWriteScheduled = false;
@@ -142,6 +143,15 @@ export class FileStore implements IStore {
 
     this.scheduleWrite();
 
+    if (isSemver(payload.version)) {
+      let vh = this.versionHistory.get(payload.instance_id);
+      if (!vh) {
+        vh = new Map();
+        this.versionHistory.set(payload.instance_id, vh);
+      }
+      vh.set(payload.version, Math.floor(now / 1000));
+    }
+
     if (Math.random() < 0.01) {
       const pruned = await this.prune();
       if (pruned > 0) {
@@ -184,6 +194,15 @@ export class FileStore implements IStore {
       osCounts.set(key, (osCounts.get(key) ?? 0) + 1);
     }
     const osDistribution = [...osCounts.entries()]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const archCounts = new Map<string, number>();
+    for (const inst of versionFiltered) {
+      const key = inst.arch ?? "unknown";
+      archCounts.set(key, (archCounts.get(key) ?? 0) + 1);
+    }
+    const archDistribution = [...archCounts.entries()]
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
 
@@ -254,6 +273,38 @@ export class FileStore implements IStore {
 
     const totalRunningAccounts = versionFiltered.reduce((s, i) => s + i.runningAccounts, 0);
 
+    const heatmap = new Map<string, number>();
+    for (const inst of versionFiltered) {
+      const d = new Date(inst.lastSeen);
+      const day = d.getUTCDay();
+      const hour = d.getUTCHours();
+      const key = `${day}:${hour}`;
+      heatmap.set(key, (heatmap.get(key) ?? 0) + 1);
+    }
+    const activityHeatmap: ActivityHeatmapEntry[] = [];
+    for (let day = 0; day < 7; day++) {
+      for (let hour = 0; hour < 24; hour++) {
+        activityHeatmap.push({ day, hour, count: heatmap.get(`${day}:${hour}`) ?? 0 });
+      }
+    }
+
+    const newInstanceByVersion: Record<string, DailyCount[]> = {};
+    for (const inst of versionFiltered) {
+      const date = new Date(inst.firstSeen).toISOString().slice(0, 10);
+      const v = inst.version;
+      if (!newInstanceByVersion[v]) newInstanceByVersion[v] = [];
+      const bucket = newInstanceByVersion[v];
+      const existing = bucket.find((b) => b.date === date);
+      if (existing) {
+        existing.count++;
+      } else {
+        bucket.push({ date, count: 1 });
+      }
+    }
+    for (const key of Object.keys(newInstanceByVersion)) {
+      newInstanceByVersion[key].sort((a, b) => a.date.localeCompare(b.date));
+    }
+
     const accountsDistribution = versionFiltered
       .map((inst) => ({
         instanceId: inst.instanceId,
@@ -283,6 +334,7 @@ export class FileStore implements IStore {
       totalRunningAccounts,
       versionDistribution,
       osDistribution,
+      archDistribution,
       deploymentDistribution,
       firstSeenDistribution,
       firstSeenByOs,
@@ -290,6 +342,8 @@ export class FileStore implements IStore {
       uptimeByVersion,
       accountsDistribution,
       recentInstances,
+      activityHeatmap,
+      newInstanceByVersion,
     };
   }
 
@@ -355,10 +409,22 @@ export class FileStore implements IStore {
 
     for (const id of stale) {
       this.instances.delete(id);
+      this.versionHistory.delete(id);
     }
 
     if (stale.length > 0) this.scheduleWrite();
 
     return stale.length;
+  }
+
+  async getVersionHistory(): Promise<VersionHistoryEntry[]> {
+    await this.ensureLoaded();
+    const results: VersionHistoryEntry[] = [];
+    for (const [instanceId, vh] of this.versionHistory) {
+      for (const [version, ts] of vh) {
+        results.push({ instanceId, version, lastSeen: ts * 1000 });
+      }
+    }
+    return results;
   }
 }

@@ -93,6 +93,8 @@ export interface AreaProps {
    * area. Default: `"pulse"`.
    */
   loadingStyle?: LoadingStyle;
+  /** Opacity to fade non-hovered series to. Default: 0.6 */
+  dimOpacity?: number;
 }
 
 function useAreaLoadingPulseState(
@@ -156,6 +158,7 @@ export function Area({
   loadingStrokeOpacity = 0.5,
   loadingPulseMode,
   loadingStyle = "pulse",
+  dimOpacity = 0.6,
 }: AreaProps) {
   // Stable slice only: hover state lives inside `<SeriesHoverDim>` and
   // `<SeriesHighlightLayer>` so this component (and its expensive
@@ -314,7 +317,7 @@ export function Area({
       />
 
       <SeriesHoverDim
-        dimOpacity={0.6}
+        dimOpacity={dimOpacity}
         enabled={showHighlight}
         seriesIndex={seriesIndex}
       >

@@ -89,7 +89,7 @@ export function DeploymentChart({ data }: DeploymentChartProps) {
             {chartData.map((_, index) => (
               <PieSlice key={index} index={index} hoverEffect="translate" />
             ))}
-            <PieCenter defaultLabel="Total" />
+            <PieCenter percent />
           </PieChart>
           <DeploymentLegend data={chartData} />
         </ChartLegendHoverProvider>

@@ -1,25 +1,19 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { AreaChart } from "@/components/charts/area-chart";
 import { Area } from "@/components/charts/area";
 import { Grid } from "@/components/charts/grid";
 import XAxis from "@/components/charts/x-axis";
 import { ChartTooltip } from "@/components/charts/tooltip/chart-tooltip";
+import {
+  ChartLegendHoverProvider,
+  useChartLegendHover,
+} from "@/components/charts/chart-legend-hover";
 import { cn } from "@/lib/utils";
+import { TimeRangePicker } from "./time-range-selector";
+import { useTimeRange } from "./time-range-context";
 import type { DailyCount } from "@/lib/types";
-
-const RANGES = [
-  { label: "7d", days: 7 },
-  { label: "21d", days: 21 },
-  { label: "1mo", days: 30 },
-  { label: "3mo", days: 90 },
-  { label: "6mo", days: 180 },
-  { label: "1y", days: 365 },
-  { label: "All", days: Infinity },
-] as const;
-
-type RangeLabel = (typeof RANGES)[number]["label"];
 
 type SplitMode = "total" | "os" | "deployment";
 
@@ -66,6 +60,33 @@ function mergeSplitData(
   return { data, seriesNames };
 }
 
+function SplitLegend({ topSeries }: { topSeries: string[] }) {
+  const { hoveredIndex, setHoveredIndex } = useChartLegendHover();
+
+  return (
+    <div className="flex flex-wrap justify-center gap-4 pt-3">
+      {topSeries.map((name, i) => {
+        const isFaded = hoveredIndex !== null && hoveredIndex !== i;
+        return (
+          <button
+            key={name}
+            onMouseEnter={() => setHoveredIndex(i)}
+            onMouseLeave={() => setHoveredIndex(null)}
+            className="flex items-center gap-1.5 text-xs transition-opacity"
+            style={{ opacity: isFaded ? 0.4 : 1 }}
+          >
+            <span
+              className="inline-block size-2 rounded-full shrink-0"
+              style={{ backgroundColor: SERIES_PALETTE[i % SERIES_PALETTE.length] }}
+            />
+            <span className="text-muted-foreground">{name}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 interface FirstSeenChartProps {
   data: DailyCount[];
   dataByOs?: Record<string, DailyCount[]>;
@@ -73,8 +94,9 @@ interface FirstSeenChartProps {
 }
 
 export function FirstSeenChart({ data, dataByOs = {}, dataByDeployment = {} }: FirstSeenChartProps) {
-  const [range, setRange] = useState<RangeLabel>("21d");
+  const { range, getDays } = useTimeRange();
   const [splitMode, setSplitMode] = useState<SplitMode>("total");
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const totalChartData = useMemo(() => {
     let running = 0;
@@ -83,9 +105,9 @@ export function FirstSeenChart({ data, dataByOs = {}, dataByDeployment = {} }: F
       return { date: new Date(d.date), cumulative: running };
     });
 
-    const selected = RANGES.find((r) => r.label === range);
-    if (!selected || selected.days === Infinity) return enriched;
-    const cutoff = Date.now() - selected.days * 24 * 60 * 60 * 1000;
+    const days = getDays();
+    if (days === Infinity) return enriched;
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
     return enriched.filter((d) => d.date.getTime() >= cutoff);
   }, [data, range]);
 
@@ -96,9 +118,9 @@ export function FirstSeenChart({ data, dataByOs = {}, dataByDeployment = {} }: F
 
     const { data: merged, seriesNames: names } = mergeSplitData(splitSource);
 
-    const selected = RANGES.find((r) => r.label === range);
-    if (!selected || selected.days === Infinity) return { data: merged, seriesNames: names };
-    const cutoff = Date.now() - selected.days * 24 * 60 * 60 * 1000;
+    const days = getDays();
+    if (days === Infinity) return { data: merged, seriesNames: names };
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
     return {
       data: merged.filter((d) => (d.date as Date).getTime() >= cutoff),
       seriesNames: names,
@@ -108,6 +130,10 @@ export function FirstSeenChart({ data, dataByOs = {}, dataByDeployment = {} }: F
   const isTotal = splitMode === "total";
   const chartData = isTotal ? totalChartData : splitChartData;
   const topSeries = seriesNames.slice(0, SERIES_PALETTE.length);
+
+  const handleHoverChange = useCallback((index: number | null) => {
+    setHoveredIndex(index);
+  }, []);
 
   if (data.length === 0) {
     return (
@@ -123,7 +149,8 @@ export function FirstSeenChart({ data, dataByOs = {}, dataByDeployment = {} }: F
       <div className="mb-6 md:mb-8">
         <div className="flex items-center justify-between gap-4">
           <p className="label-mono text-muted-foreground">Total Instances Over Time</p>
-          <div className="flex gap-4">
+          <div className="flex items-center gap-4">
+            <TimeRangePicker />
             <div className="flex gap-2">
               {SPLIT_MODES.map((m) => (
                 <button
@@ -143,101 +170,66 @@ export function FirstSeenChart({ data, dataByOs = {}, dataByDeployment = {} }: F
                 </button>
               ))}
             </div>
-            <div className="w-px h-4 bg-border self-center" />
-            <div className="flex gap-2">
-              {RANGES.map((r) => (
-                <button
-                  key={r.label}
-                  onClick={() => setRange(r.label)}
-                  className={cn(
-                    "relative text-xs font-medium transition-colors duration-150 py-1",
-                    range === r.label
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {r.label}
-                  {range === r.label && (
-                    <span className="absolute -bottom-px left-0 right-0 h-px bg-accent" />
-                  )}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
       </div>
-      <AreaChart
-        data={chartData}
-        xDataKey="date"
-        margin={{ top: 16, right: 16, bottom: 0, left: 0 }}
-        aspectRatio="3 / 1"
-      >
-        <Grid horizontal />
-        {isTotal ? (
-          <Area
-            dataKey="cumulative"
-            fill="var(--chart-line-primary)"
-            fillOpacity={0.35}
-            stroke="var(--chart-line-primary)"
-            strokeWidth={2}
-            animate
-          />
-        ) : (
-          topSeries.map((name, i) => (
+      <ChartLegendHoverProvider hoveredIndex={hoveredIndex} onHoverChange={handleHoverChange}>
+        <AreaChart
+          data={chartData}
+          xDataKey="date"
+          margin={{ top: 16, right: 16, bottom: 0, left: 0 }}
+          aspectRatio="3 / 1"
+        >
+          <Grid horizontal />
+          {isTotal ? (
             <Area
-              key={name}
-              dataKey={name}
-              fill={SERIES_PALETTE[i % SERIES_PALETTE.length]}
-              fillOpacity={0.2}
-              stroke={SERIES_PALETTE[i % SERIES_PALETTE.length]}
-              strokeWidth={1.5}
+              dataKey="cumulative"
+              fill="var(--chart-line-primary)"
+              fillOpacity={0.35}
+              stroke="var(--chart-line-primary)"
+              strokeWidth={2}
               animate
             />
-          ))
-        )}
-        <XAxis />
-        <ChartTooltip
-          showDatePill={false}
-          rows={(point) => {
-            if (isTotal) {
-              return [
-                { label: "Total", value: (point.cumulative as number).toLocaleString(), color: "var(--chart-line-primary)" },
-              ];
-            }
-            return topSeries.map((name, i) => {
-              const cumulative = (point[name] as number) ?? 0;
-              const prev = i > 0 ? ((point[topSeries[i - 1]] as number) ?? 0) : 0;
-              const individual = cumulative - prev;
-              return {
-                label: name,
-                value: individual.toLocaleString(),
-                color: SERIES_PALETTE[i % SERIES_PALETTE.length],
-              };
-            });
-          }}
-        />
-      </AreaChart>
-      {!isTotal && topSeries.length > 0 && (
-        <div className="flex flex-wrap justify-center gap-4 pt-3">
-          {topSeries.map((name, i) => (
-            <span
-              key={name}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground"
-            >
-              <span
-                className="inline-block size-2 rounded-full shrink-0"
-                style={{ backgroundColor: SERIES_PALETTE[i % SERIES_PALETTE.length] }}
+          ) : (
+            topSeries.map((name, i) => (
+              <Area
+                key={name}
+                dataKey={name}
+                fill={SERIES_PALETTE[i % SERIES_PALETTE.length]}
+                fillOpacity={0.2}
+                stroke={SERIES_PALETTE[i % SERIES_PALETTE.length]}
+              strokeWidth={1.5}
+              dimOpacity={0.2}
+              animate
               />
-              <span>{name}</span>
-            </span>
-          ))}
-          {seriesNames.length > SERIES_PALETTE.length && (
-            <span className="text-xs text-muted-foreground">
-              +{seriesNames.length - SERIES_PALETTE.length} more
-            </span>
+            ))
           )}
-        </div>
-      )}
+          <XAxis />
+          <ChartTooltip
+            showDatePill={false}
+            rows={(point) => {
+              if (isTotal) {
+                return [
+                  { label: "Total", value: (point.cumulative as number).toLocaleString(), color: "var(--chart-line-primary)" },
+                ];
+              }
+              return topSeries.map((name, i) => {
+                const cumulative = (point[name] as number) ?? 0;
+                const prev = i > 0 ? ((point[topSeries[i - 1]] as number) ?? 0) : 0;
+                const individual = cumulative - prev;
+                return {
+                  label: name,
+                  value: individual.toLocaleString(),
+                  color: SERIES_PALETTE[i % SERIES_PALETTE.length],
+                };
+              });
+            }}
+          />
+        </AreaChart>
+        {!isTotal && topSeries.length > 0 && (
+          <SplitLegend topSeries={topSeries} />
+        )}
+      </ChartLegendHoverProvider>
     </div>
   );
 }

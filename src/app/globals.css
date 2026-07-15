@@ -81,11 +81,11 @@
   --border: oklch(0 0 0 / 0.08);
   --input: oklch(0 0 0 / 0.06);
   --ring: oklch(0.59 0.24 40 / 0.4);
-  --chart-1: oklch(0.59 0.24 40);
-  --chart-2: oklch(0.55 0.18 280);
-  --chart-3: oklch(0.6 0.15 200);
-  --chart-4: oklch(0.5 0.16 300);
-  --chart-5: oklch(0.62 0.14 220);
+  --chart-1: oklch(0.6 0.22 35);
+  --chart-2: oklch(0.55 0.18 145);
+  --chart-3: oklch(0.58 0.16 220);
+  --chart-4: oklch(0.52 0.17 285);
+  --chart-5: oklch(0.62 0.16 85);
   --radius: 0px;
   --sidebar: oklch(0.97 0.005 90);
   --sidebar-foreground: oklch(0.12 0.008 240);
@@ -137,11 +137,11 @@
   --border: oklch(1 0 0 / 0.08);
   --input: oklch(1 0 0 / 0.06);
   --ring: oklch(0.59 0.24 40 / 0.5);
-  --chart-1: oklch(0.59 0.24 40);
-  --chart-2: oklch(0.55 0.18 280);
-  --chart-3: oklch(0.6 0.15 200);
-  --chart-4: oklch(0.5 0.16 300);
-  --chart-5: oklch(0.62 0.14 220);
+  --chart-1: oklch(0.63 0.23 35);
+  --chart-2: oklch(0.58 0.19 145);
+  --chart-3: oklch(0.6 0.17 220);
+  --chart-4: oklch(0.55 0.18 285);
+  --chart-5: oklch(0.65 0.17 85);
   --sidebar: oklch(0.06 0.001 240);
   --sidebar-foreground: oklch(0.985 0.001 90);
   --sidebar-primary: oklch(0.59 0.24 40);
@@ -206,6 +206,39 @@
   body {
     @apply bg-background text-foreground transition-colors duration-300;
   }
+}
+
+:root {
+  --scrollbar-thumb: var(--muted-foreground);
+  --scrollbar-thumb-hover: var(--foreground);
+}
+
+.dark {
+  --scrollbar-thumb: var(--muted-foreground);
+  --scrollbar-thumb-hover: var(--foreground);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--scrollbar-thumb) 25%, transparent) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, var(--scrollbar-thumb) 25%, transparent);
+  border-radius: 0;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklch, var(--scrollbar-thumb-hover) 40%, transparent);
 }
 
 /* Bold Typography utilities */

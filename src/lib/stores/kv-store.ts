@@ -1,5 +1,5 @@
 import { Redis } from "@upstash/redis";
-import type { DashboardStats, DailyCount, HeartbeatPayload, IStore, LabelEntry, StoredInstance, UptimeStat, VersionStat } from "../types";
+import type { ActivityHeatmapEntry, DashboardStats, DailyCount, HeartbeatPayload, IStore, LabelEntry, StoredInstance, UptimeStat, VersionHistoryEntry, VersionStat } from "../types";
 import { getPruneThreshold, isSemver } from "../types";
 
 function createRedisClient(): Redis {
@@ -23,6 +23,10 @@ function idsKey(): string {
 
 function labelsHashKey(): string {
   return `${KV_PREFIX}:labels`;
+}
+
+function versionHistoryKey(id: string): string {
+  return `${KV_PREFIX}:vh:${id}`;
 }
 
 export class UpstashRedisStore implements IStore {
@@ -63,6 +67,11 @@ export class UpstashRedisStore implements IStore {
       await kv.sadd(idsKey(), payload.instance_id);
     }
 
+    if (isSemver(payload.version)) {
+      const vhKey = versionHistoryKey(payload.instance_id);
+      await kv.hset(vhKey, { [payload.version]: Math.floor(now / 1000).toString() });
+    }
+
     // Probabilistic pruning: ~1% chance per heartbeat to avoid scanning on every call
     if (Math.random() < 0.01) {
       const pruned = await this.prune();
@@ -89,6 +98,7 @@ export class UpstashRedisStore implements IStore {
         totalRunningAccounts: 0,
         versionDistribution: [],
         osDistribution: [],
+        archDistribution: [],
         deploymentDistribution: [],
         firstSeenDistribution: [],
         firstSeenByOs: {},
@@ -96,6 +106,8 @@ export class UpstashRedisStore implements IStore {
         uptimeByVersion: [],
         accountsDistribution: [],
         recentInstances: [],
+        activityHeatmap: [],
+        newInstanceByVersion: {},
       };
     }
 
@@ -134,6 +146,15 @@ export class UpstashRedisStore implements IStore {
       osCounts.set(key, (osCounts.get(key) ?? 0) + 1);
     }
     const osDistribution = [...osCounts.entries()]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const archCounts = new Map<string, number>();
+    for (const inst of versionFiltered) {
+      const key = inst.arch ?? "unknown";
+      archCounts.set(key, (archCounts.get(key) ?? 0) + 1);
+    }
+    const archDistribution = [...archCounts.entries()]
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
 
@@ -206,6 +227,38 @@ export class UpstashRedisStore implements IStore {
 
     const totalRunningAccounts = versionFiltered.reduce((s, i) => s + i.runningAccounts, 0);
 
+    const heatmap = new Map<string, number>();
+    for (const inst of versionFiltered) {
+      const d = new Date(inst.lastSeen);
+      const day = d.getUTCDay();
+      const hour = d.getUTCHours();
+      const key = `${day}:${hour}`;
+      heatmap.set(key, (heatmap.get(key) ?? 0) + 1);
+    }
+    const activityHeatmap: ActivityHeatmapEntry[] = [];
+    for (let day = 0; day < 7; day++) {
+      for (let hour = 0; hour < 24; hour++) {
+        activityHeatmap.push({ day, hour, count: heatmap.get(`${day}:${hour}`) ?? 0 });
+      }
+    }
+
+    const newInstanceByVersion: Record<string, DailyCount[]> = {};
+    for (const inst of versionFiltered) {
+      const date = new Date(inst.firstSeen).toISOString().slice(0, 10);
+      const v = inst.version;
+      if (!newInstanceByVersion[v]) newInstanceByVersion[v] = [];
+      const bucket = newInstanceByVersion[v];
+      const existing = bucket.find((b) => b.date === date);
+      if (existing) {
+        existing.count++;
+      } else {
+        bucket.push({ date, count: 1 });
+      }
+    }
+    for (const key of Object.keys(newInstanceByVersion)) {
+      newInstanceByVersion[key].sort((a, b) => a.date.localeCompare(b.date));
+    }
+
     const accountsDistribution = versionFiltered
       .map((inst) => ({
         instanceId: inst.instanceId,
@@ -236,6 +289,7 @@ export class UpstashRedisStore implements IStore {
       totalRunningAccounts,
       versionDistribution,
       osDistribution,
+      archDistribution,
       deploymentDistribution,
       firstSeenDistribution,
       firstSeenByOs,
@@ -243,6 +297,8 @@ export class UpstashRedisStore implements IStore {
       uptimeByVersion,
       accountsDistribution,
       recentInstances,
+      activityHeatmap,
+      newInstanceByVersion,
     };
   }
 
@@ -310,11 +366,30 @@ export class UpstashRedisStore implements IStore {
     const pipeline = kv.pipeline();
     for (const id of staleIds) {
       pipeline.del(instanceKey(id));
+      pipeline.del(versionHistoryKey(id));
       pipeline.srem(idsKey(), id);
     }
     await pipeline.exec();
 
     return staleIds.length;
+  }
+
+  async getVersionHistory(): Promise<VersionHistoryEntry[]> {
+    const ids = await kv.smembers(idsKey());
+    if (ids.length === 0) return [];
+
+    const results: VersionHistoryEntry[] = [];
+    for (const id of ids) {
+      const history = await kv.hgetall<Record<string, string>>(versionHistoryKey(id));
+      if (!history) continue;
+      for (const [version, ts] of Object.entries(history)) {
+        const lastSeen = parseInt(ts, 10) * 1000;
+        if (!Number.isFinite(lastSeen)) continue;
+        results.push({ instanceId: id, version, lastSeen });
+      }
+    }
+
+    return results;
   }
 }
 

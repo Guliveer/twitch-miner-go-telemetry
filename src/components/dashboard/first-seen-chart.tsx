@@ -147,9 +147,9 @@ export function FirstSeenChart({ data, dataByOs = {}, dataByDeployment = {} }: F
   return (
     <div className="border border-border p-6 md:p-8">
       <div className="mb-6 md:mb-8">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
           <p className="label-mono text-muted-foreground">Total Instances Over Time</p>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
             <TimeRangePicker />
             <div className="flex gap-2">
               {SPLIT_MODES.map((m) => (

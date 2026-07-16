@@ -371,7 +371,7 @@ export function InstancesTable({ instances }: InstancesTableProps) {
   return (
     <div className="border border-border">
       <div className="px-6 md:px-8 pt-6 md:pt-8 pb-3">
-        <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div>
             <p className="label-mono text-muted-foreground">Recent Instances</p>
             <p className="text-xs text-muted-foreground/60 mt-0.5 font-[450]">
@@ -381,13 +381,13 @@ export function InstancesTable({ instances }: InstancesTableProps) {
           </div>
           <button
             onClick={exportCSV}
-            className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors duration-150 py-1"
+            className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors duration-150 py-1 self-start sm:self-auto"
           >
             <DownloadIcon className="size-3.5" />
             <span className="label-mono text-[10px]">CSV</span>
           </button>
         </div>
-        <div className="flex flex-wrap items-center gap-2 mt-3">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[160px] max-w-[240px]">
             <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
             <Input
@@ -406,72 +406,74 @@ export function InstancesTable({ instances }: InstancesTableProps) {
             )}
           </div>
 
-          <Select value={filterVersion} onValueChange={(v) => setFilterVersion(v ?? "")}>
-            <SelectTrigger className="w-[130px]">
-              <SelectValue placeholder="Version" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All versions</SelectItem>
-              {uniqueVersions.map((v) => (
-                <SelectItem key={v} value={v}>
-                  {v}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={filterVersion} onValueChange={(v) => setFilterVersion(v ?? "")}>
+              <SelectTrigger className="w-[130px]">
+                <SelectValue placeholder="Version" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All versions</SelectItem>
+                {uniqueVersions.map((v) => (
+                  <SelectItem key={v} value={v}>
+                    {v}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          <Select value={filterOs} onValueChange={(v) => setFilterOs(v ?? "")}>
-            <SelectTrigger className="w-[130px]">
-              <SelectValue placeholder="OS" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All OS</SelectItem>
-              {uniqueOs.map((o) => (
-                <SelectItem key={o} value={o}>
-                  {o}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <Select value={filterOs} onValueChange={(v) => setFilterOs(v ?? "")}>
+              <SelectTrigger className="w-[130px]">
+                <SelectValue placeholder="OS" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All OS</SelectItem>
+                {uniqueOs.map((o) => (
+                  <SelectItem key={o} value={o}>
+                    {o}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          <Select value={filterDeployment} onValueChange={(v) => setFilterDeployment(v ?? "")}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Deployment" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All deployments</SelectItem>
-              {uniqueDeployments.map((d) => (
-                <SelectItem key={d} value={d}>
-                  {d}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <Select value={filterDeployment} onValueChange={(v) => setFilterDeployment(v ?? "")}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Deployment" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All deployments</SelectItem>
+                {uniqueDeployments.map((d) => (
+                  <SelectItem key={d} value={d}>
+                    {d}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none whitespace-nowrap hover:text-foreground transition-colors">
-            <input
-              type="checkbox"
-              checked={showIgnored}
-              onChange={(e) => setShowIgnored(e.target.checked)}
-              className="size-3.5 accent-accent"
-            />
-            Show ignored
-          </label>
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none whitespace-nowrap hover:text-foreground transition-colors">
+              <input
+                type="checkbox"
+                checked={showIgnored}
+                onChange={(e) => setShowIgnored(e.target.checked)}
+                className="size-3.5 accent-accent"
+              />
+              Show ignored
+            </label>
 
-          {hasFilters && (
-            <button
-              onClick={() => {
-                setSearch("");
-                setFilterVersion("");
-                setFilterOs("");
-                setFilterDeployment("");
-                setShowIgnored(true);
-              }}
-              className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
-            >
-              Clear
-            </button>
-          )}
+            {hasFilters && (
+              <button
+                onClick={() => {
+                  setSearch("");
+                  setFilterVersion("");
+                  setFilterOs("");
+                  setFilterDeployment("");
+                  setShowIgnored(true);
+                }}
+                className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
 
           <div className="flex items-center gap-1.5 ml-auto">
             <span className="text-[10px] text-muted-foreground label-mono">Show</span>
@@ -559,17 +561,18 @@ export function InstancesTable({ instances }: InstancesTableProps) {
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-between px-6 md:px-8 py-3 border-t border-border">
-        <p className="text-xs text-muted-foreground">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-6 md:px-8 py-3 border-t border-border">
+        <p className="text-xs text-muted-foreground order-2 sm:order-1">
           {filtered.length === 0
             ? "0 results"
             : `${currentPage * pageSize + 1}–${Math.min((currentPage + 1) * pageSize, filtered.length)} of ${filtered.length}`}
         </p>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 order-1 sm:order-2">
           <button
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={currentPage === 0}
             className="p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors"
+            aria-label="Previous page"
           >
             <CaretLeftIcon className="size-4" />
           </button>
@@ -585,6 +588,7 @@ export function InstancesTable({ instances }: InstancesTableProps) {
                     ? "bg-foreground text-background"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 }`}
+                aria-label={`Page ${n + 1}`}
               >
                 {n + 1}
               </button>
@@ -594,6 +598,7 @@ export function InstancesTable({ instances }: InstancesTableProps) {
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
             disabled={currentPage >= totalPages - 1}
             className="p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors"
+            aria-label="Next page"
           >
             <CaretRightIcon className="size-4" />
           </button>

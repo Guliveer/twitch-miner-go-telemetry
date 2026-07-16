@@ -118,7 +118,7 @@ export function AdoptionCurve({ data, versionDistribution }: AdoptionCurveProps)
   return (
     <div className="border border-border p-6 md:p-8">
       <div className="mb-6 md:mb-8">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
           <p className="label-mono text-muted-foreground">Adoption Curve (New Instances per Version)</p>
           <TimeRangePicker />
         </div>

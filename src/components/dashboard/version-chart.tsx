@@ -84,7 +84,7 @@ export function VersionChart({ data }: VersionChartProps) {
   return (
     <div className="border border-border p-6 md:p-8">
       <div className="mb-6 md:mb-8">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           <p className="label-mono text-muted-foreground">Version Distribution</p>
           <div className="flex gap-2">
             <button

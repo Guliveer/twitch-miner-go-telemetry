@@ -31,26 +31,6 @@ const SERIES_PALETTE = [
   "var(--chart-5)",
 ];
 
-function hashIndex(str: string, mod: number): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash) + str.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash) % mod;
-}
-
-function versionColor(version: string): string {
-  const parts = version.replace(/^v/, "").split(".");
-  const minor = parts.slice(0, 2).join(".");
-  return SERIES_PALETTE[hashIndex(minor, SERIES_PALETTE.length)];
-}
-
-function getMinorVersion(version: string): string {
-  const parts = version.replace(/^v/, "").split(".");
-  return parts.slice(0, 2).join(".");
-}
-
 function VersionHistoryLegend({ topVersions }: { topVersions: string[] }) {
   const { hoveredIndex, setHoveredIndex } = useChartLegendHover();
 
@@ -68,9 +48,9 @@ function VersionHistoryLegend({ topVersions }: { topVersions: string[] }) {
           >
             <span
               className="inline-block size-2 rounded-full shrink-0"
-              style={{ backgroundColor: versionColor(v) }}
+              style={{ backgroundColor: SERIES_PALETTE[i % SERIES_PALETTE.length] }}
             />
-            <span className="text-muted-foreground">{getMinorVersion(v)}</span>
+            <span className="text-muted-foreground">{v}</span>
           </button>
         );
       })}
@@ -162,7 +142,7 @@ export function VersionHistoryChart() {
   return (
     <div className="border border-border p-6 md:p-8">
       <div className="mb-6 md:mb-8">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
           <p className="label-mono text-muted-foreground">Version Share Over Time</p>
           <TimeRangePicker />
         </div>
@@ -175,13 +155,13 @@ export function VersionHistoryChart() {
           aspectRatio="3 / 1"
         >
           <Grid horizontal />
-          {topVersions.map((version) => (
+          {topVersions.map((version, i) => (
             <Area
               key={version}
               dataKey={version}
-              fill={versionColor(version)}
-              fillOpacity={0.3}
-              stroke={versionColor(version)}
+              fill={SERIES_PALETTE[i % SERIES_PALETTE.length]}
+              fillOpacity={0.25}
+              stroke={SERIES_PALETTE[i % SERIES_PALETTE.length]}
               strokeWidth={1.5}
               dimOpacity={0.2}
               animate
@@ -193,10 +173,10 @@ export function VersionHistoryChart() {
             rows={(point) => {
               return topVersions
                 .filter((v) => (point[v] as number) > 0)
-                .map((v) => ({
+                .map((v, i) => ({
                   label: v,
                   value: `${point[v]}%`,
-                  color: versionColor(v),
+                  color: SERIES_PALETTE[i % SERIES_PALETTE.length],
                 }));
             }}
           />

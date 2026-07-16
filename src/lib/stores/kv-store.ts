@@ -62,8 +62,6 @@ export class UpstashRedisStore implements IStore {
         ignored: false,
       };
       await kv.set(instanceKey(payload.instance_id), instance, { nx: true });
-
-      // Track ID in a set so we can enumerate all instances
       await kv.sadd(idsKey(), payload.instance_id);
     }
 

@@ -2,33 +2,66 @@
 
 import { useMemo } from "react";
 import type { ActivityHeatmapEntry } from "@/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ActivityHeatmapProps {
   data: ActivityHeatmapEntry[];
 }
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const HOURS = Array.from({ length: 24 }, (_, h) => h);
 
-function HeatmapCell({ count, max }: { count: number; max: number }) {
-  const intensity = max > 0 ? count / max : 0;
+const INTENSITY_LEVELS = [
+  "bg-muted",
+  "bg-primary/15",
+  "bg-primary/30",
+  "bg-primary/55",
+  "bg-primary/85",
+];
 
-  let bgColor = "var(--muted)";
-  if (intensity > 0) {
-    if (intensity < 0.25) bgColor = "var(--chart-1)";
-    else if (intensity < 0.5) bgColor = "var(--chart-2)";
-    else if (intensity < 0.75) bgColor = "var(--chart-3)";
-    else bgColor = "var(--chart-4)";
-  }
+function level(count: number, max: number): number {
+  if (max === 0 || count === 0) return 0;
+  const rel = count / max;
+  if (rel <= 0.25) return 1;
+  if (rel <= 0.5) return 2;
+  if (rel <= 0.75) return 3;
+  return 4;
+}
+
+function HeatmapCell({
+  count,
+  max,
+  day,
+  hour,
+}: {
+  count: number;
+  max: number;
+  day: number;
+  hour: number;
+}) {
+  const lvl = level(count, max);
 
   return (
-    <div
-      className="aspect-square rounded-sm transition-colors"
-      style={{
-        backgroundColor: bgColor,
-        opacity: intensity > 0 ? 0.3 + intensity * 0.7 : 0.15,
-      }}
-      title={`${count} instances`}
-    />
+    <Tooltip>
+      <TooltipTrigger
+        className={`w-6 h-6 shrink-0 rounded-none ${INTENSITY_LEVELS[lvl]} transition-colors`}
+      />
+      <TooltipContent>
+        <span className="font-medium">{DAYS[day]}</span>{" "}
+        <span className="text-muted-foreground">
+          {hour.toString().padStart(2, "0")}:00
+        </span>
+        <span className="ml-auto font-medium tabular-nums">{count}</span>
+        <span className="text-muted-foreground">
+          {" "}
+          {count === 1 ? "instance" : "instances"}
+        </span>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -67,21 +100,21 @@ export function ActivityHeatmap({ data }: ActivityHeatmapProps) {
       </div>
       <div className="overflow-x-auto">
         <div className="inline-flex flex-col gap-0.5">
-          <div className="flex gap-0.5">
-            <div className="w-10 shrink-0" />
-            {Array.from({ length: 24 }, (_, h) => (
-              <div key={h} className="w-5 text-center text-[9px] text-muted-foreground shrink-0">
+          <div className="flex gap-1">
+            <div className="w-8 shrink-0" />
+            {HOURS.map((h) => (
+              <div key={h} className="w-6 text-center text-[10px] text-muted-foreground shrink-0">
                 {h}
               </div>
             ))}
           </div>
           {grid.map((row, day) => (
-            <div key={day} className="flex gap-0.5">
-              <div className="w-10 shrink-0 text-[10px] text-muted-foreground flex items-center">
+            <div key={day} className="flex gap-1 items-center">
+              <div className="w-8 shrink-0 text-[11px] text-muted-foreground text-right pr-1">
                 {DAYS[day]}
               </div>
               {row.map((count, hour) => (
-                <HeatmapCell key={hour} count={count} max={maxCount} />
+                <HeatmapCell key={hour} count={count} max={maxCount} day={day} hour={hour} />
               ))}
             </div>
           ))}

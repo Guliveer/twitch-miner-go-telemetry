@@ -32,7 +32,7 @@ export function StabilityChart({ data }: StabilityChartProps) {
   if (data.length === 0) {
     return (
       <div className="border border-border p-6 md:p-8">
-        <p className="label-mono text-muted-foreground">Stability (Avg Uptime)</p>
+        <p className="label-mono text-muted-foreground">Stability</p>
         <p className="text-sm text-muted-foreground mt-3 font-[450]">No data yet</p>
       </div>
     );
@@ -41,7 +41,7 @@ export function StabilityChart({ data }: StabilityChartProps) {
   return (
     <div className="border border-border p-6 md:p-8">
       <div className="mb-6 md:mb-8">
-        <p className="label-mono text-muted-foreground">Stability (Avg Uptime)</p>
+        <p className="label-mono text-muted-foreground">Stability</p>
       </div>
       <BarChart
         data={chartData}

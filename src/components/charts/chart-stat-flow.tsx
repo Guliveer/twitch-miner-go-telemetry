@@ -88,10 +88,15 @@ export function ChartStatFlow({
   icon,
 }: ChartStatFlowProps) {
   const numberFlowReady = useNumberFlowElementReady();
+  const [mounted, setMounted] = useState(false);
   const staticValue = useMemo(
     () => formatStatValue(value, formatOptions, prefix, suffix),
     [value, formatOptions, prefix, suffix]
   );
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <>
@@ -101,7 +106,7 @@ export function ChartStatFlow({
         </div>
       ) : null}
       <span className={cn("text-foreground tabular-nums", valueClassName)}>
-        {numberFlowReady ? (
+        {mounted && numberFlowReady ? (
           <NumberFlow
             format={formatOptions}
             isolate

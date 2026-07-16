@@ -26,6 +26,8 @@ import {
   EyeSlashIcon,
   EyeIcon,
   DownloadIcon,
+  CaretLeftIcon,
+  CaretRightIcon,
 } from "@phosphor-icons/react";
 import type { StoredInstance } from "@/lib/types";
 
@@ -211,6 +213,12 @@ export function InstancesTable({ instances }: InstancesTableProps) {
   const [showIgnored, setShowIgnored] = useState(true);
   const [toggling, setToggling] = useState<string | null>(null);
   const [sort, setSort] = useState<SortState>({ column: "lastSeen", direction: "desc" });
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(25);
+
+  useEffect(() => {
+    setPage(0);
+  }, [search, filterVersion, filterOs, filterDeployment, showIgnored, pageSize]);
 
   const uniqueVersions = useMemo(
     () =>
@@ -312,6 +320,10 @@ export function InstancesTable({ instances }: InstancesTableProps) {
 
     return result;
   }, [instances, search, filterVersion, filterOs, filterDeployment, sort, showIgnored]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages - 1);
+  const paginated = filtered.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
 
   const ignoredCount = useMemo(() => instances.filter((i) => i.ignored).length, [instances]);
 
@@ -460,6 +472,24 @@ export function InstancesTable({ instances }: InstancesTableProps) {
               Clear
             </button>
           )}
+
+          <div className="flex items-center gap-1.5 ml-auto">
+            <span className="text-[10px] text-muted-foreground label-mono">Show</span>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(v) => setPageSize(Number(v))}
+            >
+              <SelectTrigger className="w-[64px] h-7 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
       <div className="overflow-x-auto -mx-px border-t border-border">
@@ -478,14 +508,14 @@ export function InstancesTable({ instances }: InstancesTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 ? (
+            {paginated.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-12">
+                <TableCell colSpan={9} className="text-center text-sm text-muted-foreground py-12">
                   No instances match the current filters
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((inst) => (
+              paginated.map((inst) => (
                 <TableRow key={inst.instanceId} className={`transition-colors hover:bg-muted/30 ${inst.ignored ? "opacity-40" : ""}`}>
                   <TableCell className="font-mono text-xs break-all max-w-[200px] whitespace-normal text-foreground/85">
                     {inst.instanceId}
@@ -528,6 +558,46 @@ export function InstancesTable({ instances }: InstancesTableProps) {
             )}
           </TableBody>
         </Table>
+      </div>
+      <div className="flex items-center justify-between px-6 md:px-8 py-3 border-t border-border">
+        <p className="text-xs text-muted-foreground">
+          {filtered.length === 0
+            ? "0 results"
+            : `${currentPage * pageSize + 1}–${Math.min((currentPage + 1) * pageSize, filtered.length)} of ${filtered.length}`}
+        </p>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={currentPage === 0}
+            className="p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors"
+          >
+            <CaretLeftIcon className="size-4" />
+          </button>
+          {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+            const start = Math.max(0, Math.min(currentPage - 2, totalPages - 5));
+            const n = start + i;
+            return (
+              <button
+                key={n}
+                onClick={() => setPage(n)}
+                className={`size-7 text-xs rounded-none transition-colors ${
+                  n === currentPage
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                }`}
+              >
+                {n + 1}
+              </button>
+            );
+          })}
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={currentPage >= totalPages - 1}
+            className="p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors"
+          >
+            <CaretRightIcon className="size-4" />
+          </button>
+        </div>
       </div>
     </div>
   );

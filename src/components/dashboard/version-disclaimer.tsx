@@ -15,6 +15,12 @@ export function VersionDisclaimer() {
           <p className="label-mono text-muted-foreground">Changelog</p>
           <div className="space-y-3">
             <div className="border border-border p-4">
+              <div className="text-accent font-semibold mb-1 font-sans">[1.24.2]</div>
+              <div className="text-muted-foreground font-[450]">
+                Uptime tracking (Avg Uptime chart)
+              </div>
+            </div>
+            <div className="border border-border p-4">
               <div className="text-accent font-semibold mb-1 font-sans">[1.22.1]</div>
               <div className="text-muted-foreground font-[450]">
                 Added active/configured accounts telemetry

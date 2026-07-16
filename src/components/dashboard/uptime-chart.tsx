@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { BarChart } from "@/components/charts/bar-chart";
 import { Bar } from "@/components/charts/bar";
+import { BarYAxis } from "@/components/charts/bar-y-axis";
 import { Grid } from "@/components/charts/grid";
 import { ChartTooltip } from "@/components/charts/tooltip/chart-tooltip";
 import type { UptimeStat } from "@/lib/types";
@@ -47,10 +48,11 @@ export function StabilityChart({ data }: StabilityChartProps) {
         data={chartData}
         xDataKey="name"
         orientation="horizontal"
-        margin={{ top: 0, right: 80, left: 0, bottom: 0 }}
+        margin={{ top: 8, right: 80, left: 80, bottom: 8 }}
         aspectRatio="3 / 1"
       >
         <Grid horizontal={false} />
+        <BarYAxis />
         <Bar
           dataKey="uptime"
           fill="var(--chart-2)"

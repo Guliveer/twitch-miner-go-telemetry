@@ -9,7 +9,7 @@ import { InstancesTable } from "@/components/dashboard/instances-table";
 import { FirstSeenChart } from "@/components/dashboard/first-seen-chart";
 import { VersionDisclaimer } from "@/components/dashboard/version-disclaimer";
 import { ActivityHeatmap } from "@/components/dashboard/activity-heatmap";
-import { StabilityChart } from "@/components/dashboard/stability-chart";
+import { StabilityChart } from "@/components/dashboard/uptime-chart";
 import { AdoptionCurve } from "@/components/dashboard/adoption-curve";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 

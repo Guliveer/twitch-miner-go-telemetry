@@ -14,6 +14,13 @@ interface SeriesHoverDimProps {
   durationSec?: number;
   /** Series index for multi-series legend hover dimming. */
   seriesIndex?: number;
+  /**
+   * Legend group index — when set, this series is considered part of a legend
+   * group. All series sharing the same `legendGroup` value highlight / dim
+   * together when the corresponding legend item is hovered. Takes precedence
+   * over `seriesIndex` for legend-based dimming.
+   */
+  legendGroup?: number;
   /** Stable chart visuals — area fill, stroke line, dashed tail, etc. */
   children: ReactNode;
 }
@@ -33,15 +40,17 @@ export function SeriesHoverDim({
   dimOpacity = 0.5,
   durationSec = 0.4,
   seriesIndex,
+  legendGroup,
   children,
 }: SeriesHoverDimProps) {
   const { tooltipData, selection } = useChartHover();
   const { hoveredIndex: legendHoveredIndex } = useChartLegendHover();
   const isChartHovering = tooltipData !== null || selection?.active === true;
+  const groupKey = legendGroup ?? seriesIndex;
   const isLegendDimmed =
     legendHoveredIndex !== null &&
-    seriesIndex !== undefined &&
-    legendHoveredIndex !== seriesIndex;
+    groupKey !== undefined &&
+    legendHoveredIndex !== groupKey;
   const opacity =
     enabled && (isChartHovering || isLegendDimmed) ? dimOpacity : 1;
   return (

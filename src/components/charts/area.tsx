@@ -95,6 +95,8 @@ export interface AreaProps {
   loadingStyle?: LoadingStyle;
   /** Opacity to fade non-hovered series to. Default: 0.6 */
   dimOpacity?: number;
+  /** Legend group index — groups multiple series under one legend entry. */
+  legendGroup?: number;
 }
 
 function useAreaLoadingPulseState(
@@ -159,6 +161,7 @@ export function Area({
   loadingPulseMode,
   loadingStyle = "pulse",
   dimOpacity = 0.6,
+  legendGroup,
 }: AreaProps) {
   // Stable slice only: hover state lives inside `<SeriesHoverDim>` and
   // `<SeriesHighlightLayer>` so this component (and its expensive
@@ -319,6 +322,7 @@ export function Area({
       <SeriesHoverDim
         dimOpacity={dimOpacity}
         enabled={showHighlight}
+        legendGroup={legendGroup}
         seriesIndex={seriesIndex}
       >
         {useViewportEdgeFade ? (

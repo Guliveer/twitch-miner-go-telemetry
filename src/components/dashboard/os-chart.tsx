@@ -8,18 +8,11 @@ import {
   ChartLegendHoverProvider,
   useChartLegendHover,
 } from "@/components/charts/chart-legend-hover";
+import { colorForIndex } from "@/lib/version-colors";
 
 interface OSChartProps {
   data: { name: string; count: number }[];
 }
-
-const DONUT_PALETTE = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-];
 
 function OSLegend({ data }: { data: { label: string; value: number; color: string }[] }) {
   const { hoveredIndex, setHoveredIndex } = useChartLegendHover();
@@ -59,7 +52,7 @@ export function OSChart({ data }: OSChartProps) {
       data.map((d, i) => ({
         label: d.name,
         value: d.count,
-        color: DONUT_PALETTE[i % DONUT_PALETTE.length],
+        color: colorForIndex(i),
       })),
     [data],
   );

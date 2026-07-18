@@ -4,8 +4,14 @@ import { useMemo } from "react";
 import { BarChart } from "@/components/charts/bar-chart";
 import { Bar } from "@/components/charts/bar";
 import { BarYAxis } from "@/components/charts/bar-y-axis";
+import { BarValueAxis } from "@/components/charts/bar-value-axis";
 import { Grid } from "@/components/charts/grid";
 import { ChartTooltip } from "@/components/charts/tooltip/chart-tooltip";
+import {
+  majorMinorKey,
+  minorVersionColor,
+  parseVersion,
+} from "@/lib/version-colors";
 import type { UptimeStat } from "@/lib/types";
 
 interface StabilityChartProps {
@@ -19,15 +25,36 @@ function formatUptime(seconds: number): string {
   return `${hours}h`;
 }
 
+function formatTickHours(hours: number): string {
+  if (hours >= 24) {
+    const d = Math.floor(hours / 24);
+    const h = Math.round(hours % 24);
+    return h > 0 ? `${d}d${h}h` : `${d}d`;
+  }
+  return `${Math.round(hours)}h`;
+}
+
+function compareVersionsDesc(a: string, b: string): number {
+  const [aMaj, aMin, aPat] = parseVersion(a);
+  const [bMaj, bMin, bPat] = parseVersion(b);
+  if (aMaj !== bMaj) return bMaj - aMaj;
+  if (aMin !== bMin) return bMin - aMin;
+  return bPat - aPat;
+}
+
 export function StabilityChart({ data }: StabilityChartProps) {
   const chartData = useMemo(() => {
     return [...data]
-      .sort((a, b) => b.avgUptimeSeconds - a.avgUptimeSeconds)
+      .sort((a, b) => compareVersionsDesc(a.version, b.version))
       .slice(0, 10)
-      .map((d) => ({
-        name: d.version,
-        uptime: Math.round(d.avgUptimeSeconds / 3600),
-      }));
+      .map((d) => {
+        const minor = majorMinorKey(d.version);
+        return {
+          name: d.version,
+          uptime: Math.round(d.avgUptimeSeconds / 3600),
+          barColor: minorVersionColor(minor),
+        };
+      });
   }, [data]);
 
   if (data.length === 0) {
@@ -48,22 +75,25 @@ export function StabilityChart({ data }: StabilityChartProps) {
         data={chartData}
         xDataKey="name"
         orientation="horizontal"
-        margin={{ top: 8, right: 80, left: 80, bottom: 8 }}
+        margin={{ top: 8, right: 80, left: 80, bottom: 24 }}
         aspectRatio="3 / 1"
       >
-        <Grid horizontal={false} />
+        <Grid horizontal={false} vertical />
         <BarYAxis />
+        <BarValueAxis formatTick={formatTickHours} />
         <Bar
           dataKey="uptime"
-          fill="var(--chart-2)"
+          fill="var(--chart-1)"
+          fillKey="barColor"
           lineCap="round"
           animate
         />
         <ChartTooltip
           rows={(point) => {
             const hours = point.uptime as number;
+            const barColor = (point as Record<string, unknown>).barColor as string | undefined;
             return [
-              { label: "Avg Uptime", value: formatUptime(hours * 3600), color: "var(--chart-2)" },
+              { label: "Avg Uptime", value: formatUptime(hours * 3600), color: barColor ?? "var(--chart-1)" },
             ];
           }}
         />

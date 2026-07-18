@@ -5,6 +5,7 @@ import { AreaChart } from "@/components/charts/area-chart";
 import { Area } from "@/components/charts/area";
 import { Grid } from "@/components/charts/grid";
 import XAxis from "@/components/charts/x-axis";
+import { YAxis } from "@/components/charts/y-axis";
 import { ChartTooltip } from "@/components/charts/tooltip/chart-tooltip";
 import {
   ChartLegendHoverProvider,
@@ -12,6 +13,12 @@ import {
 } from "@/components/charts/chart-legend-hover";
 import { TimeRangePicker } from "./time-range-selector";
 import { useTimeRange } from "./time-range-context";
+import {
+  minorVersionColor,
+  groupByMinor,
+  getMinorGroups,
+  CHART_PALETTE,
+} from "@/lib/version-colors";
 
 interface VersionHistoryDay {
   date: string;
@@ -23,24 +30,17 @@ interface VersionHistoryResponse {
   versions: string[];
 }
 
-const SERIES_PALETTE = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-];
-
-function VersionHistoryLegend({ topVersions }: { topVersions: string[] }) {
+function VersionHistoryLegend({ minorGroups }: { minorGroups: Map<string, string[]> }) {
   const { hoveredIndex, setHoveredIndex } = useChartLegendHover();
+  const names = useMemo(() => [...minorGroups.keys()], [minorGroups]);
 
   return (
-    <div className="flex flex-wrap items-center gap-3 pt-3">
-      {topVersions.map((v, i) => {
+    <div className="flex flex-wrap justify-center items-center gap-3 pt-3">
+      {names.map((name, i) => {
         const isFaded = hoveredIndex !== null && hoveredIndex !== i;
         return (
           <button
-            key={v}
+            key={name}
             onMouseEnter={() => setHoveredIndex(i)}
             onMouseLeave={() => setHoveredIndex(null)}
             className="flex items-center gap-1.5 text-xs transition-opacity"
@@ -48,9 +48,9 @@ function VersionHistoryLegend({ topVersions }: { topVersions: string[] }) {
           >
             <span
               className="inline-block size-2 rounded-full shrink-0"
-              style={{ backgroundColor: SERIES_PALETTE[i % SERIES_PALETTE.length] }}
+              style={{ backgroundColor: minorVersionColor(name) }}
             />
-            <span className="text-muted-foreground">{v}</span>
+            <span className="text-muted-foreground">{name}</span>
           </button>
         );
       })}
@@ -81,17 +81,51 @@ export function VersionHistoryChart() {
     fetchVersionHistory();
   }, []);
 
+  const minorGroups = useMemo(() => {
+    if (!data?.versions) return new Map<string, string[]>();
+    return groupByMinor(data.versions);
+  }, [data]);
+
+  const topMinorGroups = useMemo(() => {
+    if (!data?.days || data.days.length === 0) return new Map<string, string[]>();
+
+    const latestDay = data.days[data.days.length - 1];
+    const totals = new Map<string, number>();
+    for (const [minor, versions] of minorGroups) {
+      let sum = 0;
+      for (const v of versions) {
+        sum += latestDay.versions[v] ?? 0;
+      }
+      totals.set(minor, sum);
+    }
+
+    const sorted = getMinorGroups([...minorGroups.keys()]);
+    const sortedByCount = sorted.sort((a, b) => (totals.get(b) ?? 0) - (totals.get(a) ?? 0));
+    const topKeys = sortedByCount.slice(0, CHART_PALETTE.length);
+
+    const filtered = new Map<string, string[]>();
+    for (const key of topKeys) {
+      const vals = minorGroups.get(key);
+      if (vals) filtered.set(key, vals);
+    }
+    return filtered;
+  }, [data, minorGroups]);
+
+  const seriesNames = useMemo(() => [...topMinorGroups.keys()], [topMinorGroups]);
+
   const chartData = useMemo(() => {
     if (!data?.days) return [];
 
     const days = getDays();
     const all = data.days.map((day) => {
       const total = Object.values(day.versions).reduce((a, b) => a + b, 0);
-      if (total === 0) return { date: new Date(day.date) };
-
       const row: Record<string, unknown> = { date: new Date(day.date) };
-      for (const [version, count] of Object.entries(day.versions)) {
-        row[version] = Math.round((count / total) * 100);
+      for (const [minor, versions] of topMinorGroups) {
+        let countForGroup = 0;
+        for (const v of versions) {
+          countForGroup += day.versions[v] ?? 0;
+        }
+        row[minor] = total > 0 ? Math.round((countForGroup / total) * 100) : 0;
       }
       return row;
     });
@@ -99,19 +133,7 @@ export function VersionHistoryChart() {
     if (days === Infinity) return all;
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
     return all.filter((d) => (d.date as Date).getTime() >= cutoff);
-  }, [data, range, getDays]);
-
-  const topVersions = useMemo(() => {
-    if (!data?.versions) return [];
-
-    const latestDay = data.days[data.days.length - 1];
-    if (!latestDay) return data.versions.slice(0, 5);
-
-    const sorted = [...data.versions].sort(
-      (a, b) => (latestDay.versions[b] || 0) - (latestDay.versions[a] || 0)
-    );
-    return sorted.slice(0, 5);
-  }, [data]);
+  }, [data, range, getDays, topMinorGroups]);
 
   const handleHoverChange = useCallback((index: number | null) => {
     setHoveredIndex(index);
@@ -120,7 +142,7 @@ export function VersionHistoryChart() {
   if (loading) {
     return (
       <div className="border border-border p-6 md:p-8">
-        <p className="label-mono text-muted-foreground">Version Share Over Time</p>
+        <p className="label-mono text-muted-foreground">Version Share</p>
         <div className="h-48 flex items-center justify-center">
           <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
@@ -131,7 +153,7 @@ export function VersionHistoryChart() {
   if (error || !data || data.days.length === 0) {
     return (
       <div className="border border-border p-6 md:p-8">
-        <p className="label-mono text-muted-foreground">Version Share Over Time</p>
+        <p className="label-mono text-muted-foreground">Version Share</p>
         <p className="text-sm text-muted-foreground mt-3 font-[450]">
           {error || "No data yet"}
         </p>
@@ -143,7 +165,7 @@ export function VersionHistoryChart() {
     <div className="border border-border p-6 md:p-8">
       <div className="mb-6 md:mb-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
-          <p className="label-mono text-muted-foreground">Version Share Over Time</p>
+          <p className="label-mono text-muted-foreground">Version Share</p>
           <TimeRangePicker />
         </div>
       </div>
@@ -151,37 +173,39 @@ export function VersionHistoryChart() {
         <AreaChart
           data={chartData}
           xDataKey="date"
-          margin={{ top: 16, right: 16, bottom: 0, left: 0 }}
+          margin={{ top: 16, right: 16, bottom: 0, left: 40 }}
           aspectRatio="3 / 1"
+          yScaleDomainMax={100}
         >
           <Grid horizontal />
-          {topVersions.map((version, i) => (
+          {seriesNames.map((name) => (
             <Area
-              key={version}
-              dataKey={version}
-              fill={SERIES_PALETTE[i % SERIES_PALETTE.length]}
+              key={name}
+              dataKey={name}
+              fill={minorVersionColor(name)}
               fillOpacity={0.25}
-              stroke={SERIES_PALETTE[i % SERIES_PALETTE.length]}
+              stroke={minorVersionColor(name)}
               strokeWidth={1.5}
               dimOpacity={0.2}
               animate
             />
           ))}
           <XAxis />
+          <YAxis formatTick={(v) => `${v}%`} />
           <ChartTooltip
             showDatePill={false}
             rows={(point) => {
-              return topVersions
-                .filter((v) => (point[v] as number) > 0)
-                .map((v, i) => ({
-                  label: v,
-                  value: `${point[v]}%`,
-                  color: SERIES_PALETTE[i % SERIES_PALETTE.length],
+              return seriesNames
+                .filter((name) => ((point[name] as number) ?? 0) > 0)
+                .map((name) => ({
+                  label: name,
+                  value: `${point[name]}%`,
+                  color: minorVersionColor(name),
                 }));
             }}
           />
         </AreaChart>
-        <VersionHistoryLegend topVersions={topVersions} />
+        <VersionHistoryLegend minorGroups={topMinorGroups} />
       </ChartLegendHoverProvider>
     </div>
   );

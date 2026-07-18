@@ -8,9 +8,7 @@ import { DeploymentChart } from "@/components/dashboard/deployment-chart";
 import { InstancesTable } from "@/components/dashboard/instances-table";
 import { FirstSeenChart } from "@/components/dashboard/first-seen-chart";
 import { VersionDisclaimer } from "@/components/dashboard/version-disclaimer";
-import { ActivityHeatmap } from "@/components/dashboard/activity-heatmap";
 import { StabilityChart } from "@/components/dashboard/uptime-chart";
-import { AdoptionCurve } from "@/components/dashboard/adoption-curve";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 
 export const dynamic = "force-dynamic";
@@ -47,17 +45,14 @@ export default async function Dashboard() {
           data={stats.firstSeenDistribution}
           dataByOs={stats.firstSeenByOs}
           dataByDeployment={stats.firstSeenByDeployment}
+          dataByVersion={stats.newInstanceByVersion}
+          versionDistribution={stats.versionDistribution}
         />
       </div>
 
       {/* Version chart */}
       <div style={{ animation: "fade-in-up 0.5s cubic-bezier(0.25, 0, 0, 1) 0.24s both" }}>
         <VersionChart data={stats.versionDistribution} />
-      </div>
-
-      {/* Adoption curve — full width */}
-      <div style={{ animation: "fade-in-up 0.5s cubic-bezier(0.25, 0, 0, 1) 0.28s both" }}>
-        <AdoptionCurve data={stats.newInstanceByVersion} versionDistribution={stats.versionDistribution} />
       </div>
 
       {/* Version history over time */}
@@ -70,11 +65,6 @@ export default async function Dashboard() {
         <OSChart data={stats.osDistribution} />
         <ArchChart data={stats.archDistribution} />
         <DeploymentChart data={stats.deploymentDistribution} />
-      </div>
-
-      {/* Activity heatmap */}
-      <div style={{ animation: "fade-in-up 0.5s cubic-bezier(0.25, 0, 0, 1) 0.48s both" }}>
-        <ActivityHeatmap data={stats.activityHeatmap} />
       </div>
 
       {/* Stability */}

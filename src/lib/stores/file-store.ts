@@ -149,7 +149,9 @@ export class FileStore implements IStore {
         vh = new Map();
         this.versionHistory.set(payload.instance_id, vh);
       }
-      vh.set(payload.version, Math.floor(now / 1000));
+      if (!vh.has(payload.version)) {
+        vh.set(payload.version, Math.floor(now / 1000));
+      }
     }
 
     if (Math.random() < 0.01) {
@@ -289,11 +291,11 @@ export class FileStore implements IStore {
     }
 
     const newInstanceByVersion: Record<string, DailyCount[]> = {};
-    for (const inst of versionFiltered) {
+    for (const inst of instances) {
       const date = new Date(inst.firstSeen).toISOString().slice(0, 10);
-      const v = inst.version;
-      if (!newInstanceByVersion[v]) newInstanceByVersion[v] = [];
-      const bucket = newInstanceByVersion[v];
+      const version = inst.version;
+      if (!newInstanceByVersion[version]) newInstanceByVersion[version] = [];
+      const bucket = newInstanceByVersion[version];
       const existing = bucket.find((b) => b.date === date);
       if (existing) {
         existing.count++;

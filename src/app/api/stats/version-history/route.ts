@@ -69,8 +69,7 @@ export async function GET(): Promise<NextResponse> {
     }
 
     const sortedDays = Array.from(dayMap.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-30);
+      .sort(([a], [b]) => a.localeCompare(b));
 
     const days: DayData[] = sortedDays.map(([date, versions]) => ({
       date,

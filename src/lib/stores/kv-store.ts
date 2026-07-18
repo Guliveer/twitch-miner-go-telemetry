@@ -67,7 +67,10 @@ export class UpstashRedisStore implements IStore {
 
     if (isSemver(payload.version)) {
       const vhKey = versionHistoryKey(payload.instance_id);
-      await kv.hset(vhKey, { [payload.version]: Math.floor(now / 1000).toString() });
+      const existing = await kv.hget<string>(vhKey, payload.version);
+      if (!existing) {
+        await kv.hset(vhKey, { [payload.version]: Math.floor(now / 1000).toString() });
+      }
     }
 
     // Probabilistic pruning: ~1% chance per heartbeat to avoid scanning on every call
@@ -241,11 +244,11 @@ export class UpstashRedisStore implements IStore {
     }
 
     const newInstanceByVersion: Record<string, DailyCount[]> = {};
-    for (const inst of versionFiltered) {
+    for (const inst of instances) {
       const date = new Date(inst.firstSeen).toISOString().slice(0, 10);
-      const v = inst.version;
-      if (!newInstanceByVersion[v]) newInstanceByVersion[v] = [];
-      const bucket = newInstanceByVersion[v];
+      const version = inst.version;
+      if (!newInstanceByVersion[version]) newInstanceByVersion[version] = [];
+      const bucket = newInstanceByVersion[version];
       const existing = bucket.find((b) => b.date === date);
       if (existing) {
         existing.count++;

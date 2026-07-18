@@ -63,6 +63,8 @@ export interface AreaChartProps {
   style?: CSSProperties;
   /** Fires when the internal chart phase changes (e.g. OG capture readiness). */
   onPhaseChange?: (phase: ChartPhase) => void;
+  /** When set, drives the y-axis max instead of scanning lines. E.g. 100 for percentage charts. */
+  yScaleDomainMax?: number;
   /** Child components (Area, Grid, ChartTooltip, etc.) */
   children: ReactNode;
 }
@@ -124,6 +126,7 @@ interface ChartInnerProps {
   loadingLabel?: string;
   yDomainTweenDuration: number;
   yDomainTween: boolean;
+  yScaleDomainMax?: number;
   xDomain?: [Date, Date];
   xDomainSlotCount?: number;
   tweenYDomainOnXDomainChange?: boolean;
@@ -146,6 +149,7 @@ function ChartInner({
   loadingLabel,
   yDomainTweenDuration,
   yDomainTween,
+  yScaleDomainMax,
   xDomain,
   xDomainSlotCount,
   tweenYDomainOnXDomainChange,
@@ -177,6 +181,7 @@ function ChartInner({
       xDomainSlotCount={xDomainSlotCount}
       yDomainTween={yDomainTween}
       yDomainTweenDuration={yDomainTweenDuration}
+      yScaleDomainMax={yScaleDomainMax}
     >
       {children}
     </TimeSeriesChartInner>
@@ -197,6 +202,7 @@ export function AreaChart({
   loadingLabel,
   yDomainTweenDuration = DEFAULT_Y_DOMAIN_TWEEN_MS,
   yDomainTween = true,
+  yScaleDomainMax,
   xDomain,
   xDomainSlotCount,
   tweenYDomainOnXDomainChange = false,
@@ -252,6 +258,7 @@ export function AreaChart({
             xDomainSlotCount={xDomainSlotCount}
             yDomainTween={yDomainTween}
             yDomainTweenDuration={yDomainTweenDuration}
+            yScaleDomainMax={yScaleDomainMax}
           >
             {children}
           </ChartInner>

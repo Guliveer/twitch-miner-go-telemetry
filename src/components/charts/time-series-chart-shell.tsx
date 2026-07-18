@@ -105,7 +105,7 @@ function resolveTimeSeriesYDomain(
   yScaleDomainMax: number | undefined
 ): [number, number] {
   if (yScaleDomainMax != null && yScaleDomainMax > 0) {
-    return [0, yScaleDomainMax * 1.1];
+    return [0, yScaleDomainMax];
   }
 
   const { minValue, maxValue } = collectNumericExtents(data, dataKeys);

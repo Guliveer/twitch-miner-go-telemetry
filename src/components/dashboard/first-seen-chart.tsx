@@ -353,11 +353,16 @@ export function FirstSeenChart({
                 return patchNames
                   .filter((name) => ((point[name] as number) ?? 0) > 0)
                   .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
-                  .map((name) => ({
-                    label: name,
-                    value: (point[name] as number).toLocaleString(),
-                    color: minorVersionColor(majorMinorKey(name)),
-                  }));
+                  .map((name) => {
+                    const idx = patchNames.indexOf(name);
+                    const cumulative = (point[name] as number) ?? 0;
+                    const prev = idx > 0 ? ((point[patchNames[idx - 1]] as number) ?? 0) : 0;
+                    return {
+                      label: name,
+                      value: (cumulative - prev).toLocaleString(),
+                      color: minorVersionColor(majorMinorKey(name)),
+                    };
+                  });
               }
               return topSeries.map((name, i) => {
                 const cumulative = (point[name] as number) ?? 0;

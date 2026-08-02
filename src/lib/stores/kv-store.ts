@@ -1,5 +1,5 @@
 import { Redis } from "@upstash/redis";
-import type { ActivityHeatmapEntry, DashboardStats, DailyCount, HeartbeatPayload, IStore, LabelEntry, StoredInstance, UptimeStat, VersionHistoryEntry, VersionStat } from "../types";
+import type { ActivityHeatmapEntry, DashboardStats, DailyCount, HeartbeatPayload, IStore, LabelEntry, StoredInstance, StorageInfo, UptimeStat, VersionHistoryEntry, VersionStat } from "../types";
 import { getPruneThreshold, isSemver } from "../types";
 
 function createRedisClient(): Redis {
@@ -70,14 +70,6 @@ export class UpstashRedisStore implements IStore {
       const existing = await kv.hget<string>(vhKey, payload.version);
       if (!existing) {
         await kv.hset(vhKey, { [payload.version]: Math.floor(now / 1000).toString() });
-      }
-    }
-
-    // Probabilistic pruning: ~1% chance per heartbeat to avoid scanning on every call
-    if (Math.random() < 0.01) {
-      const pruned = await this.prune();
-      if (pruned > 0) {
-        console.log(`[telemetry] Pruned ${pruned} stale instance(s) from Redis`);
       }
     }
   }
@@ -350,8 +342,57 @@ export class UpstashRedisStore implements IStore {
     await kv.set(instanceKey(instanceId), raw);
   }
 
-  async prune(): Promise<number> {
-    const threshold = Date.now() - getPruneThreshold();
+  async countInactive(days: number): Promise<number> {
+    const threshold = Date.now() - days * 24 * 60 * 60 * 1000;
+    const ids = await kv.smembers(idsKey());
+    if (ids.length === 0) return 0;
+
+    const rawInstances = await kv.mget<StoredInstance[]>(...ids.map(instanceKey));
+    return rawInstances.filter((i): i is StoredInstance => i !== null && i.lastSeen < threshold).length;
+  }
+
+  async getStorageInfo(): Promise<StorageInfo> {
+    const ids = await kv.smembers(idsKey());
+
+    let instanceBytes = 0;
+    let ignoredCount = 0;
+    if (ids.length > 0) {
+      const rawInstances = await kv.mget<StoredInstance[]>(...ids.map(instanceKey));
+      for (const inst of rawInstances) {
+        if (!inst) continue;
+        instanceBytes += JSON.stringify(inst).length;
+        if (inst.ignored) ignoredCount++;
+      }
+    }
+
+    const labels = await kv.hgetall<Record<string, string>>(labelsHashKey());
+    const labelCount = labels ? Object.keys(labels).length : 0;
+    const labelBytes = labels ? JSON.stringify(labels).length : 0;
+
+    let versionHistoryEntries = 0;
+    let versionHistoryBytes = 0;
+    let versionHistoryKeys = 0;
+    for (const id of ids) {
+      const history = await kv.hgetall<Record<string, string>>(versionHistoryKey(id));
+      if (!history) continue;
+      versionHistoryKeys++;
+      versionHistoryEntries += Object.keys(history).length;
+      versionHistoryBytes += JSON.stringify(history).length;
+    }
+
+    return {
+      storeType: "redis",
+      instanceCount: ids.length,
+      ignoredCount,
+      labelCount,
+      versionHistoryEntries,
+      totalKeys: ids.length + versionHistoryKeys + 2,
+      estimatedBytes: instanceBytes + labelBytes + versionHistoryBytes,
+    };
+  }
+
+  async prune(days?: number): Promise<number> {
+    const threshold = Date.now() - (days ? days * 24 * 60 * 60 * 1000 : getPruneThreshold());
     const ids = await kv.smembers(idsKey());
     const staleIds: string[] = [];
 

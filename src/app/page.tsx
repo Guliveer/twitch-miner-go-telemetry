@@ -10,6 +10,7 @@ import { FirstSeenChart } from "@/components/dashboard/first-seen-chart";
 import { VersionDisclaimer } from "@/components/dashboard/version-disclaimer";
 import { StabilityChart } from "@/components/dashboard/uptime-chart";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { DashboardTabs } from "@/components/dashboard/dashboard-tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -18,15 +19,16 @@ export default async function Dashboard() {
 
   return (
     <DashboardShell>
-      {/* Header subtitle + disclaimer */}
-      <div className="flex flex-col gap-2" style={{ animation: "fade-in-up 0.5s cubic-bezier(0.25, 0, 0, 1) both" }}>
-        <div className="flex items-start gap-3">
-          <VersionDisclaimer />
+      <DashboardTabs>
+        {/* Header subtitle + disclaimer */}
+        <div className="flex flex-col gap-2" style={{ animation: "fade-in-up 0.5s cubic-bezier(0.25, 0, 0, 1) both" }}>
+          <div className="flex items-start gap-3">
+            <VersionDisclaimer />
+          </div>
+          <p className="text-sm md:text-base text-muted-foreground max-w-2xl font-[450] tracking-tight">
+            Real-time adoption, version distribution, and deployment insights across the twitch-miner-go network.
+          </p>
         </div>
-        <p className="text-sm md:text-base text-muted-foreground max-w-2xl font-[450] tracking-tight">
-          Real-time adoption, version distribution, and deployment insights across the twitch-miner-go network.
-        </p>
-      </div>
 
       {/* Stats */}
       <div style={{ animation: "fade-in-up 0.5s cubic-bezier(0.25, 0, 0, 1) 0.08s both" }}>
@@ -76,6 +78,7 @@ export default async function Dashboard() {
       <div style={{ animation: "fade-in-up 0.5s cubic-bezier(0.25, 0, 0, 1) 0.64s both" }}>
         <InstancesTable instances={stats.recentInstances} />
       </div>
+      </DashboardTabs>
     </DashboardShell>
   );
 }

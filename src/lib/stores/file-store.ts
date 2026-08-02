@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { ActivityHeatmapEntry, DashboardStats, DailyCount, HeartbeatPayload, IStore, LabelEntry, StoredInstance, UptimeStat, VersionHistoryEntry, VersionStat } from "../types";
+import type { ActivityHeatmapEntry, DashboardStats, DailyCount, HeartbeatPayload, IStore, LabelEntry, StoredInstance, StorageInfo, UptimeStat, VersionHistoryEntry, VersionStat } from "../types";
 import { getPruneThreshold, isSemver } from "../types";
 
 function getDataDir(): string {
@@ -151,13 +151,6 @@ export class FileStore implements IStore {
       }
       if (!vh.has(payload.version)) {
         vh.set(payload.version, Math.floor(now / 1000));
-      }
-    }
-
-    if (Math.random() < 0.01) {
-      const pruned = await this.prune();
-      if (pruned > 0) {
-        console.log(`[telemetry] Pruned ${pruned} stale instance(s) from file store`);
       }
     }
   }
@@ -397,10 +390,52 @@ export class FileStore implements IStore {
     this.scheduleWrite();
   }
 
-  async prune(): Promise<number> {
+  async countInactive(days: number): Promise<number> {
     await this.ensureLoaded();
 
-    const threshold = Date.now() - getPruneThreshold();
+    const threshold = Date.now() - days * 24 * 60 * 60 * 1000;
+    let count = 0;
+    for (const inst of this.instances.values()) {
+      if (inst.lastSeen < threshold) count++;
+    }
+    return count;
+  }
+
+  async getStorageInfo(): Promise<StorageInfo> {
+    await this.ensureLoaded();
+
+    const instanceBytes = JSON.stringify([...this.instances.values()]).length;
+    const labelBytes = JSON.stringify([...this.labels.entries()]).length;
+
+    let versionHistoryEntries = 0;
+    let versionHistoryBytes = 0;
+    let versionHistoryKeys = 0;
+    for (const vh of this.versionHistory.values()) {
+      versionHistoryKeys++;
+      versionHistoryEntries += vh.size;
+      versionHistoryBytes += JSON.stringify([...vh.entries()]).length;
+    }
+
+    let ignoredCount = 0;
+    for (const inst of this.instances.values()) {
+      if (inst.ignored) ignoredCount++;
+    }
+
+    return {
+      storeType: "file",
+      instanceCount: this.instances.size,
+      ignoredCount,
+      labelCount: this.labels.size,
+      versionHistoryEntries,
+      totalKeys: this.instances.size + versionHistoryKeys + 2,
+      estimatedBytes: instanceBytes + labelBytes + versionHistoryBytes,
+    };
+  }
+
+  async prune(days?: number): Promise<number> {
+    await this.ensureLoaded();
+
+    const threshold = Date.now() - (days ? days * 24 * 60 * 60 * 1000 : getPruneThreshold());
     const stale: string[] = [];
 
     for (const [id, inst] of this.instances) {

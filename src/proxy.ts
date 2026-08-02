@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
 
-const PROTECTED_PATHS = ["/", "/api/stats", "/api/instances"];
+const PROTECTED_PATHS = ["/", "/api/stats", "/api/instances", "/api/storage", "/api/storage/prune"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

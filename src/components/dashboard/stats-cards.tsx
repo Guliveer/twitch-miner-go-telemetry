@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import {
   Monitor,
   Clock,
@@ -8,6 +7,7 @@ import {
   CalendarCheck,
   Users,
 } from "@phosphor-icons/react";
+import { AnimatedCounter } from "./animated-counter";
 
 interface StatsCardsProps {
   totalInstances: number;
@@ -15,34 +15,6 @@ interface StatsCardsProps {
   active24h: number;
   active7d: number;
   totalRunning: number;
-}
-
-function AnimatedCounter({ value }: { value: number }) {
-  const [display, setDisplay] = useState(0);
-  const startRef = useRef<number | null>(null);
-  const rafRef = useRef<number>(0);
-
-  useEffect(() => {
-    startRef.current = null;
-    const duration = 800;
-
-    function step(now: number) {
-      if (startRef.current === null) startRef.current = now;
-      const elapsed = now - startRef.current;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplay(Math.round(eased * value));
-
-      if (progress < 1) {
-        rafRef.current = requestAnimationFrame(step);
-      }
-    }
-
-    rafRef.current = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [value]);
-
-  return <>{display.toLocaleString()}</>;
 }
 
 function StatCard({

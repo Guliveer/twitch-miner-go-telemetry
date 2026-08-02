@@ -91,6 +91,27 @@ export interface VersionHistoryDay {
   versions: Record<string, number>;
 }
 
+export interface StorageInfo {
+  storeType: "redis" | "file";
+  instanceCount: number;
+  ignoredCount: number;
+  labelCount: number;
+  versionHistoryEntries: number;
+  totalKeys: number;
+  estimatedBytes: number;
+}
+
+export interface PrunePreview {
+  days: number;
+  candidates: number;
+}
+
+export interface PruneResult {
+  days: number;
+  deleted: number;
+  remaining: number;
+}
+
 export interface IStore {
   recordHeartbeat(payload: HeartbeatPayload): Promise<void>;
   getStats(): Promise<DashboardStats>;
@@ -99,7 +120,9 @@ export interface IStore {
   setInstanceLabel(instanceId: string, label: string): Promise<void>;
   setInstanceIgnored(instanceId: string, ignored: boolean): Promise<void>;
   getVersionHistory(): Promise<VersionHistoryEntry[]>;
-  prune(): Promise<number>;
+  getStorageInfo(): Promise<StorageInfo>;
+  countInactive(days: number): Promise<number>;
+  prune(days?: number): Promise<number>;
 }
 
 export function isSemver(version: string): boolean {

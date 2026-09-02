@@ -119,6 +119,7 @@ export interface IStore {
   getInstanceLabels(): Promise<LabelEntry[]>;
   setInstanceLabel(instanceId: string, label: string): Promise<void>;
   setInstanceIgnored(instanceId: string, ignored: boolean): Promise<void>;
+  deleteInstance(instanceId: string): Promise<boolean>;
   getVersionHistory(): Promise<VersionHistoryEntry[]>;
   getStorageInfo(): Promise<StorageInfo>;
   countInactive(days: number): Promise<number>;

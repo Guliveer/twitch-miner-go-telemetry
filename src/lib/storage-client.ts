@@ -44,3 +44,11 @@ export function invalidateStorageCache(): void {
   storageInfoPromise = null;
   candidatesPromises.clear();
 }
+
+/** Permanently deletes a single instance (with its version history) by id. */
+export async function deleteInstance(instanceId: string): Promise<void> {
+  const res = await fetch(`/api/instances/${encodeURIComponent(instanceId)}`, {
+    method: "DELETE",
+  });
+  await parseJson<{ ok: boolean }>(res);
+}

@@ -309,7 +309,8 @@ export class FileStore implements IStore {
       .sort((a, b) => b.running - a.running)
       .slice(0, 30);
 
-    // All instances sorted: non-ignored first (by lastSeen desc), then ignored (by lastSeen desc)
+    // All instances sorted: non-ignored first (by lastSeen desc), then ignored (by lastSeen desc).
+    // Not truncated so ignored instances remain reachable via the table's Show-ignored filter + pagination.
     const recentInstances = [...instances]
       .map((inst) => ({
         ...inst,
@@ -318,8 +319,7 @@ export class FileStore implements IStore {
       .sort((a, b) => {
         if (a.ignored !== b.ignored) return a.ignored ? 1 : -1;
         return b.lastSeen - a.lastSeen;
-      })
-      .slice(0, 50);
+      });
 
     return {
       totalInstances: total,
@@ -388,6 +388,17 @@ export class FileStore implements IStore {
 
     inst.ignored = ignored;
     this.scheduleWrite();
+  }
+
+  async deleteInstance(instanceId: string): Promise<boolean> {
+    await this.ensureLoaded();
+
+    if (!this.instances.has(instanceId)) return false;
+
+    this.instances.delete(instanceId);
+    this.versionHistory.delete(instanceId);
+    this.scheduleWrite();
+    return true;
   }
 
   async countInactive(days: number): Promise<number> {

@@ -12,6 +12,7 @@ import {
 } from "@phosphor-icons/react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -27,7 +28,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import type { StorageInfo } from "@/lib/types";
-import { fetchCandidatesCached, fetchStorageInfoCached, invalidateStorageCache } from "@/lib/storage-client";
+import { fetchCandidatesCached, fetchStorageInfoCached, invalidateStorageCache, deleteInstance } from "@/lib/storage-client";
 import { AnimatedCounter } from "./animated-counter";
 
 const PRUNE_OPTIONS = [14, 30, 60, 90];
@@ -83,6 +84,12 @@ export function StoragePanel() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+
+  const [instanceId, setInstanceId] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingInstance, setDeletingInstance] = useState(false);
+  const [deleteResult, setDeleteResult] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -152,6 +159,31 @@ export function StoragePanel() {
   }
 
   const deleteDisabled = deleting || candidatesLoading || (candidates !== null && candidates === 0);
+
+  async function confirmDeleteInstance() {
+    setDeletingInstance(true);
+    setDeleteResult(null);
+    setDeleteError(null);
+    try {
+      await deleteInstance(instanceId.trim());
+      setDeleteResult(`Instance ${instanceId.trim()} deleted.`);
+      setDeleteDialogOpen(false);
+      setInstanceId("");
+      invalidateStorageCache();
+      setLoading(true);
+      setStorage(await fetchStorageInfoCached());
+      setLoading(false);
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : "Deletion failed");
+      setDeleteDialogOpen(false);
+    } finally {
+      setDeletingInstance(false);
+    }
+  }
+
+  const instanceIdTrimmed = instanceId.trim();
+  const deleteInstanceDisabled =
+    deletingInstance || instanceIdTrimmed.length === 0;
 
   return (
     <div className="flex flex-col gap-6 sm:gap-8 md:gap-10 lg:gap-12">
@@ -307,6 +339,73 @@ export function StoragePanel() {
 
         {result && <div className="mt-4 text-xs text-foreground/80 font-[450]">{result}</div>}
         {error && storage && <div className="mt-4 text-xs text-destructive font-[450]">{error}</div>}
+      </div>
+
+      {/* Delete a single instance by UUID */}
+      <div
+        className="border border-border p-6 md:p-8"
+        style={{ animation: "fade-in-up 0.5s cubic-bezier(0.25, 0, 0, 1) 0.24s both" }}
+      >
+        <p className="label-mono text-muted-foreground">Delete a specific instance</p>
+        <p className="text-xs text-muted-foreground/60 mt-0.5 font-[450] max-w-xl">
+          Permanently removes a single instance by its UUID/GUID, together with its version history.
+          Labels are kept. This cannot be undone.
+        </p>
+
+        <div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-4">
+          <Input
+            value={instanceId}
+            onChange={(e) => setInstanceId(e.target.value)}
+            placeholder="Instance ID"
+            className="w-full sm:w-[320px] font-mono text-xs"
+            spellCheck={false}
+          />
+
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogTrigger
+              render={
+                <Button variant="destructive" disabled={deleteInstanceDisabled}>
+                  {deletingInstance ? <Spinner /> : <TrashIcon />}
+                  {deletingInstance ? "Deleting…" : "Delete instance"}
+                </Button>
+              }
+            />
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogMedia>
+                  <WarningIcon />
+                </AlertDialogMedia>
+                <AlertDialogTitle>Delete this instance?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Instance {instanceIdTrimmed} will be permanently removed, including its version
+                  history. Labels are kept. This cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setDeleteDialogOpen(false)}>
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction variant="destructive" onClick={confirmDeleteInstance} disabled={deletingInstance}>
+                  {deletingInstance ? (
+                    <>
+                      <Spinner />
+                      Deleting…
+                    </>
+                  ) : (
+                    "Delete"
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+
+        {deleteResult && (
+          <div className="mt-4 text-xs text-foreground/80 font-[450]">{deleteResult}</div>
+        )}
+        {deleteError && (
+          <div className="mt-4 text-xs text-destructive font-[450]">{deleteError}</div>
+        )}
       </div>
     </div>
   );

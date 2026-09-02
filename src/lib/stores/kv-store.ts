@@ -261,12 +261,12 @@ export class UpstashRedisStore implements IStore {
       .sort((a, b) => b.running - a.running)
       .slice(0, 30);
 
+    // Not truncated so ignored instances remain reachable via the table's Show-ignored filter + pagination.
     const recentInstances = [...instances]
       .sort((a, b) => {
         if (a.ignored !== b.ignored) return a.ignored ? 1 : -1;
         return b.lastSeen - a.lastSeen;
-      })
-      .slice(0, 50);
+      });
 
     if (allLabels) {
       for (const inst of recentInstances) {
@@ -340,6 +340,18 @@ export class UpstashRedisStore implements IStore {
     if (!raw) return;
     raw.ignored = ignored;
     await kv.set(instanceKey(instanceId), raw);
+  }
+
+  async deleteInstance(instanceId: string): Promise<boolean> {
+    const raw = await kv.get<StoredInstance>(instanceKey(instanceId));
+    if (!raw) return false;
+
+    const pipeline = kv.pipeline();
+    pipeline.del(instanceKey(instanceId));
+    pipeline.srem(idsKey(), instanceId);
+    pipeline.del(versionHistoryKey(instanceId));
+    await pipeline.exec();
+    return true;
   }
 
   async countInactive(days: number): Promise<number> {

@@ -58,7 +58,7 @@ function StorageStatCell({ label, value, icon: Icon, accent, loading, format }: 
       <div className="label-mono text-muted-foreground mb-2">{label}</div>
       <div
         className={`text-2xl md:text-3xl font-bold tracking-tight tabular-nums ${
-          accent ? "text-accent" : "text-foreground"
+          accent ? "text-foreground" : "text-foreground"
         }`}
       >
         {loading ? (

@@ -1,126 +1,70 @@
-# twitch-miner-go Telemetry — Design System
+# Modern Dark
 
-## 1. Design Direction
+## Identity
 
-- **Atmosphere**: Ethereal Glass — dark mode with deep charcoal base + subtle radial mesh orbs (muted teal/indigo); light mode with warm-white base + soft atmospheric gradient.
-- **Signature material**: Glass cards with double-bezel architecture (outer shell with hairline border + inner core with subtle inset highlight).
-- **Color story**: Neutral charcoal/stone base + electric-teal accent (`#0EA5E9` → `#06B6D4`) for dark; warm off-white + same teal for light.
-- **One moment visitor remembers**: The stats card row — each card is a glass tile with a glowing accent line, large animated number, and micro-icon that catches the eye.
+Use a near-black page, quiet grey reading text, and bright white statements. Broad pools of white light reveal a small number of opaque graphite objects. Keep the typography regular and precise. A tiny mint signal can identify a live or selected state; it is not a general accent color.
 
-## 2. Color Palette
+## Layout
 
-### Dark Mode
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--bg-base` | `oklch(0.13 0.01 240)` | Page background |
-| `--bg-elevated` | `oklch(0.17 0.015 240)` | Card/surface background |
-| `--bg-glass` | `oklch(0.2 0.02 240 / 0.6)` | Glass card fill |
-| `--text-primary` | `oklch(0.95 0.01 240)` | Primary text |
-| `--text-secondary` | `oklch(0.65 0.02 240)` | Muted/secondary text |
-| `--accent` | `oklch(0.65 0.18 220)` | Interactive accent (teal) |
-| `--accent-glow` | `oklch(0.65 0.18 220 / 0.15)` | Accent glow/aura |
-| `--border-subtle` | `oklch(1 0 0 / 0.08)` | Hairline borders |
-| `--border-glass` | `oklch(1 0 0 / 0.12)` | Glass card border |
+Work on a twelve-column grid with a shared maximum width and generous gutters. Let a large opening statement occupy most of the left side while a narrower product object sits to the right, partially sharing its space. Keep the object clear of readable copy. A ruled row of facts can anchor the bottom of this opening when the brief supplies useful facts.
 
-### Light Mode
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--bg-base` | `oklch(0.98 0.005 90)` | Page background |
-| `--bg-elevated` | `oklch(1 0 0)` | Card/surface background |
-| `--bg-glass` | `oklch(1 0 0 / 0.7)` | Glass card fill |
-| `--text-primary` | `oklch(0.15 0.01 240)` | Primary text |
-| `--text-secondary` | `oklch(0.5 0.02 240)` | Muted text |
-| `--accent` | `oklch(0.55 0.18 220)` | Interactive accent |
-| `--accent-glow` | `oklch(0.55 0.18 220 / 0.1)` | Accent glow |
-| `--border-subtle` | `oklch(0 0 0 / 0.08)` | Hairline borders |
-| `--border-glass` | `oklch(0 0 0 / 0.1)` | Glass card border |
+Carry the same column edges through the page. Available arrangements include an unequal open feature grid, one large editorial image beside two smaller image-and-text rows, and alternating pairs of explanatory text and framed product views. Give section headings more space than the compact information beneath them. A large closing statement can share its field with a cropped graphite object and a softer pool of white light. Use a ruled footer with clearly grouped links.
 
-## 3. Typography
+Use only the sections and interface views the customer needs. The decorative chart, bars, and nodes are examples of a product object, not required application features or data.
 
-| Role | Font | Weight | Tracking |
-|------|------|--------|----------|
-| Display/Headings | `Geist` (sans) | 600-700 | `-0.02em` |
-| Body | `Geist` (sans) | 400 | normal |
-| Mono/Data | `Geist Mono` / `JetBrains Mono` | 400-500 | `-0.01em` |
-| Eyebrow/labels | `Geist Mono` | 500 | `0.08em` uppercase |
+## Typography
 
-- Page uses `font-sans` as default (Geist via `--font-geist-sans`).
-- Numeric data uses `tabular-nums` + `font-mono`.
-- No font-family mixing — Geist family handles everything with mono variant for data.
+Use Geist for display and reading, and Geist Mono for labels, dates, numerical values, and short notes. The aliases "Modern Dark Grotesk" and "Modern Dark Mono" refer to those faces. Keep large type at regular weight with tight tracking: the opening display scales from 44px to 104px with leading near one. Section titles are smaller, while body copy stays relaxed. Distinguish leading phrases with bright text and supporting phrases with a readable grey; do not fade essential information into the background.
 
-## 4. Spacing & Layout
+## Color and surfaces
 
-- Section padding: `py-8 md:py-10 lg:py-12`
-- Card padding: `p-5 md:p-6`
-- Grid gaps: `gap-4 md:gap-5 lg:gap-6`
-- Page max-width: `max-w-[1440px] mx-auto`
-- Content max-width: `max-w-[1600px] mx-auto`
+The ground token is the darkest field. Panel and hairline roles separate opaque surfaces without bright outlines. Use bright for titles and primary actions, read for paragraphs, and meta for small supporting text. Restrict live to small status marks with an accompanying label or state.
 
-## 5. Reusable Primitives
+White light may fall across the hero and closing object through soft radial gradients. Product objects can have subtle grey material gradients. Keep ordinary reading areas flat. Use the small panel radius for imagery and frames, and the pill radius for buttons; these serve different roles.
 
-### Glass Card
-```tsx
-<div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-5 shadow-sm backdrop-blur-xl">
-  {/* inner highlight */}
-  <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]" />
-  {/* content */}
-  {children}
-</div>
-```
+## Components
 
-**States**: Light mode swaps to `border-black/[0.06]` + `from-black/[0.02] to-transparent` + `shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]`.
+Use compact pill buttons with a white filled primary action and a dark outlined secondary action. Hover changes fill or border; focus remains a visible offset outline. Frame product views as opaque graphite panels. Keep functional interface content truthful and legible.
 
-### Stat Card
-A glass card with:
-- Top accent line (`h-0.5 w-full bg-gradient-to-r from-accent/0 via-accent to-accent/0`)
-- Label in `text-xs font-medium tracking-wide text-secondary`
-- Value in `text-3xl md:text-4xl font-bold tabular-nums text-primary`
-- Optional icon in top-right corner (phosphor icon, `text-accent`)
+When comparisons are needed, use aligned columns with a quiet filled featured column. Show selection separately with a labeled control and a small signal. Disclosures use a numbered gutter, question, and plus/minus within ruled rows. These are available patterns, not required sections.
 
-### Pill Button / Toggle
-`rounded-full px-4 py-1.5 text-xs font-medium transition-all duration-300` with active state using `bg-accent/15 text-accent border-accent/30` and inactive using `text-secondary border-transparent hover:text-primary hover:bg-white/[0.05]`.
+## Images
 
-### Floating Header
-Fixed top, `mx-auto mt-3`, `w-[calc(100%-2rem)] max-w-5xl`, `rounded-2xl`, glass background with `backdrop-blur-2xl`, `border border-white/[0.08]`, `px-4 py-2 md:px-6 md:py-3`.
+Use grayscale editorial photography with restrained contrast and slightly darkened image fields. A lead image can use a tall 4:5 crop, with square supporting images beside summaries. Small round grayscale portraits can identify real people. Preserve recognizable subjects and reserve image dimensions. Product screenshots should communicate the customer's actual product rather than reproduce abstract sample charts.
 
-### Chart Area
-Recharts styling:
-- Grid lines: `stroke="currentColor"` with `opacity={0.06}`
-- Axis ticks: `fill="var(--text-secondary)"` `fontSize={11}`
-- Tooltip: glass-style with `backdrop-blur-xl`, `border border-white/[0.1]`, `rounded-xl`
-- Area fill: gradient from accent color at 20% to transparent
-- Bar/Pie: accent colors with subtle gradient fills
+## Motion
 
-### Table
-- Header: `text-xs font-medium tracking-wide text-secondary uppercase`
-- Rows: alternating subtle background, hover `bg-white/[0.03]`
-- Cell: `text-sm py-3`
-- Border: `border-b border-white/[0.06]`
-- Search input: glass style with `bg-white/[0.04]` `border-white/[0.08]` `rounded-xl` `pl-9`
+Use the duration and easing tokens for brief control color changes. The white lighting is static. Do not add pointer-following light, staged entrances, floating panels, or animated decorative charts.
 
-## 6. Motion
+## Responsive behavior
 
-| Element | Animation | Duration | Easing |
-|---------|-----------|----------|--------|
-| Page load (cards) | `translateY(16px)` → `translateY(0)` + `opacity(0→1)` | 600ms | `cubic-bezier(0.16, 1, 0.3, 1)` |
-| Stat cards stagger | Sequential with 80ms delay per card | — | — |
-| Hover (cards) | Slight `translateY(-2px)` + shadow deepen | 300ms | `cubic-bezier(0.16, 1, 0.3, 1)` |
-| Button active | `scale(0.97)` | 150ms | `cubic-bezier(0.16, 1, 0.3, 1)` |
-| Theme toggle | Icon rotate | 400ms | `cubic-bezier(0.16, 1, 0.3, 1)` |
+Respond to the containing block. At 1180px, reduce gutters and give the opening copy the full grid width. Around 900px, simplify multi-column arrangements, use two-column facts and short-entry grids, and stack comparison options. At 560px, use the narrow gutter, single-column entries and quotations, and images above their text with wider crops. Scale decorative objects without covering copy. Keep the complete footer and all actions available.
 
-- All animations respect `prefers-reduced-motion`.
-- No infinite loop animations on static content.
-- Transitions use `transition-all duration-300 ease-out` as default.
+## Design limits
 
-## 7. Responsive Behavior
+Keep large areas neutral and opaque. Avoid colored glows, translucent glass, heavy display weights, and decorative motion. Do not invent metrics, testimonials, application states, or extra sections to fill the available patterns.
 
-- **Mobile (< 768px)**: Single column, full-width cards, `px-4`, stack layout.
-- **Tablet (768-1024px)**: 2-column grid for charts, compact header.
-- **Desktop (> 1024px)**: Full bento layout, floating nav, multi-column grids.
+## Authoritative tokens
 
-## 8. Accessibility
-
-- WCAG AA contrast minimum for all text.
-- Focus rings: `ring-2 ring-accent ring-offset-2 ring-offset-bg-base`.
-- Touch targets: minimum 44px for interactive elements.
-- All interactive elements have `aria-label` where icon-only.
+| CSS variable | Value |
+| --- | --- |
+| --dp-color-ground | #050505 |
+| --dp-color-panel | #0e0e0e |
+| --dp-color-hairline | #222222 |
+| --dp-color-hairline-2 | #303030 |
+| --dp-color-bright | #f2f2f2 |
+| --dp-color-read | #a6a9ad |
+| --dp-color-meta | #8a8d91 |
+| --dp-color-live | #3fd6c6 |
+| --dp-color-inverse-ink | #0a0a0a |
+| --dp-color-dim | #96999d |
+| --dp-typography-face | "Modern Dark Grotesk", "Helvetica Neue", Arial, sans-serif |
+| --dp-typography-mono | "Modern Dark Mono", "SFMono-Regular", Menlo, monospace |
+| --dp-spacing-gutter | 48px |
+| --dp-spacing-gap | 24px |
+| --dp-spacing-max | 1360px |
+| --dp-radius-panel | 6px |
+| --dp-radius-pill | 999px |
+| --dp-border-hairline | 1px |
+| --dp-motion-duration | 120ms |
+| --dp-motion-ease | ease-out |

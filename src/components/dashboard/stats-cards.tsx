@@ -36,7 +36,7 @@ function StatCard({
       }}
     >
       {/* Accent bar */}
-      <div className="absolute top-0 left-0 right-0 h-0.5 bg-accent/0 group-hover:bg-accent transition-colors duration-150" />
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-foreground/0 group-hover:bg-foreground transition-colors duration-150" />
 
       {/* Icon - subtle */}
       <div className="absolute bottom-3 right-3 text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors duration-150">

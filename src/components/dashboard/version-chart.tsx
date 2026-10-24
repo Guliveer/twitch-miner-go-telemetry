@@ -98,7 +98,7 @@ export function VersionChart({ data }: VersionChartProps) {
             >
               by count
               {sortMode === "count" && (
-                <span className="absolute -bottom-px left-0 right-0 h-px bg-accent" />
+                <span className="absolute -bottom-px left-0 right-0 h-px bg-success" />
               )}
             </button>
             <button
@@ -112,7 +112,7 @@ export function VersionChart({ data }: VersionChartProps) {
             >
               by version
               {sortMode === "version" && (
-                <span className="absolute -bottom-px left-0 right-0 h-px bg-accent" />
+                <span className="absolute -bottom-px left-0 right-0 h-px bg-success" />
               )}
             </button>
           </div>

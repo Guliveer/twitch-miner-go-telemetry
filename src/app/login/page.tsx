@@ -16,11 +16,11 @@ function LoginForm() {
       <div className="w-full max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-700">
         {/* Branding */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center size-12 rounded-lg bg-gradient-to-br from-accent/15 to-accent/5 border border-accent/15 mb-4">
-            <Monitor className="size-6 text-accent" weight="duotone" />
+          <div className="inline-flex items-center justify-center size-12 rounded-lg bg-muted border border-border mb-4">
+            <Monitor className="size-6 text-foreground" weight="duotone" />
           </div>
-          <h1 className="text-lg font-bold tracking-tight">
-            twitch-miner-go
+          <h1 className="text-lg font-semibold tracking-tight">
+            Twitch Miner Go
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Telemetry Dashboard
@@ -28,12 +28,10 @@ function LoginForm() {
         </div>
 
         {/* Card */}
-        <div className="rounded-lg border bg-card p-6 md:p-8 shadow-md">
+        <div className="rounded-lg border bg-card p-6 md:p-8">
           <form action="/api/auth" method="POST" className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">
-                Username
-              </Label>
+              <Label htmlFor="username">Username</Label>
               <Input
                 id="username"
                 name="username"
@@ -45,9 +43,7 @@ function LoginForm() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">
-                Password
-              </Label>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 name="password"
@@ -64,7 +60,7 @@ function LoginForm() {
               </div>
             )}
 
-            <Button type="submit" className="w-full h-10 rounded-lg bg-accent hover:bg-accent/90 text-accent-foreground font-semibold transition-all duration-200">
+            <Button type="submit" className="w-full h-10 font-semibold">
               Sign in
             </Button>
           </form>

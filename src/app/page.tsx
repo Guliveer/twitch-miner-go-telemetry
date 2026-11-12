@@ -21,7 +21,7 @@ export default async function Dashboard() {
     <DashboardShell>
       <DashboardTabs>
         {/* Header subtitle + disclaimer */}
-        <div className="flex flex-col gap-2" style={{ animation: "fade-in-up 0.5s cubic-bezier(0.25, 0, 0, 1) both" }}>
+        <div className="enter flex flex-col gap-2">
           <div className="flex items-start gap-3">
             <VersionDisclaimer />
           </div>
@@ -31,7 +31,7 @@ export default async function Dashboard() {
         </div>
 
       {/* Stats */}
-      <div style={{ animation: "fade-in-up 0.5s cubic-bezier(0.25, 0, 0, 1) 0.08s both" }}>
+      <div className="enter" data-enter={1}>
         <StatsCards
           totalInstances={stats.totalInstances}
           active1h={stats.active1h}
@@ -42,7 +42,7 @@ export default async function Dashboard() {
       </div>
 
       {/* First seen chart */}
-      <div style={{ animation: "fade-in-up 0.5s cubic-bezier(0.25, 0, 0, 1) 0.16s both" }}>
+      <div className="enter" data-enter={2}>
         <FirstSeenChart
           data={stats.firstSeenDistribution}
           dataByOs={stats.firstSeenByOs}
@@ -53,29 +53,29 @@ export default async function Dashboard() {
       </div>
 
       {/* Version chart */}
-      <div style={{ animation: "fade-in-up 0.5s cubic-bezier(0.25, 0, 0, 1) 0.24s both" }}>
+      <div className="enter" data-enter={3}>
         <VersionChart data={stats.versionDistribution} />
       </div>
 
       {/* Version history over time */}
-      <div style={{ animation: "fade-in-up 0.5s cubic-bezier(0.25, 0, 0, 1) 0.32s both" }}>
+      <div className="enter" data-enter={4}>
         <VersionHistoryChart />
       </div>
 
       {/* OS + Arch + Deployment */}
-      <div className="grid gap-8 md:grid-cols-3" style={{ animation: "fade-in-up 0.5s cubic-bezier(0.25, 0, 0, 1) 0.4s both" }}>
+      <div className="enter grid gap-8 md:grid-cols-3" data-enter={5}>
         <OSChart data={stats.osDistribution} />
         <ArchChart data={stats.archDistribution} />
         <DeploymentChart data={stats.deploymentDistribution} />
       </div>
 
       {/* Stability */}
-      <div style={{ animation: "fade-in-up 0.5s cubic-bezier(0.25, 0, 0, 1) 0.56s both" }}>
+      <div className="enter" data-enter={6}>
         <StabilityChart data={stats.uptimeByVersion} />
       </div>
 
       {/* Instances table */}
-      <div style={{ animation: "fade-in-up 0.5s cubic-bezier(0.25, 0, 0, 1) 0.64s both" }}>
+      <div className="enter" data-enter={7}>
         <InstancesTable instances={stats.recentInstances} />
       </div>
       </DashboardTabs>

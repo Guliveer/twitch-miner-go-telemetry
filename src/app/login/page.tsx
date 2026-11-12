@@ -19,7 +19,7 @@ function LoginForm() {
           <div className="inline-flex items-center justify-center size-12 rounded-lg bg-muted border border-border mb-4">
             <Monitor className="size-6 text-foreground" weight="duotone" />
           </div>
-          <h1 className="text-lg font-bold tracking-tight">
+          <h1 className="text-lg font-semibold tracking-tight">
             Twitch Miner Go
           </h1>
           <p className="text-sm text-muted-foreground mt-1">

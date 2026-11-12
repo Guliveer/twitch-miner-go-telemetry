@@ -7,7 +7,7 @@ import { HeaderScroll } from "@/components/header-scroll";
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
-  variable: "--font-mono",
+  variable: "--font-geist-mono",
 });
 
 const geist = Geist({
@@ -63,7 +63,7 @@ export default function RootLayout({
           {children}
         </main>
         <footer className="px-6 py-6 text-center text-xs text-muted-foreground/40">
-          <span className="label-mono text-[10px]">
+          <span className="label-mono">
             Telemetry for{" "}
             <a
               href="https://github.com/Guliveer/twitch-miner-go"

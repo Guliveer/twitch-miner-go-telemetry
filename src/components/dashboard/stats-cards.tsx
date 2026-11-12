@@ -21,19 +21,17 @@ function StatCard({
   label,
   value,
   icon: Icon,
-  delay,
+  index,
 }: {
   label: string;
   value: number;
   icon: React.ElementType;
-  delay: number;
+  index: number;
 }) {
   return (
     <div
-      className="group relative flex-1 min-w-[160px] border border-border p-5 md:p-6 transition-colors duration-150 hover:border-muted-foreground/30"
-      style={{
-        animation: `fade-in-up 0.5s cubic-bezier(0.25, 0, 0, 1) ${delay}s both`,
-      }}
+      className="enter group relative flex-1 min-w-[160px] border border-border p-5 md:p-6 transition-colors duration-150 hover:border-muted-foreground/30"
+      data-enter={index}
     >
       {/* Accent bar */}
       <div className="absolute top-0 left-0 right-0 h-0.5 bg-foreground/0 group-hover:bg-foreground transition-colors duration-150" />
@@ -65,11 +63,11 @@ export function StatsCards({
 }: StatsCardsProps) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-px bg-border">
-      <StatCard label="Total Instances" value={totalInstances} icon={Monitor} delay={0} />
-      <StatCard label="Active (1h)" value={active1h} icon={Clock} delay={0.04} />
-      <StatCard label="Active (24h)" value={active24h} icon={Calendar} delay={0.08} />
-      <StatCard label="Active (7d)" value={active7d} icon={CalendarCheck} delay={0.12} />
-      <StatCard label="Running Accounts" value={totalRunning} icon={Users} delay={0.16} />
+      <StatCard label="Total Instances" value={totalInstances} icon={Monitor} index={0} />
+      <StatCard label="Active (1h)" value={active1h} icon={Clock} index={1} />
+      <StatCard label="Active (24h)" value={active24h} icon={Calendar} index={2} />
+      <StatCard label="Active (7d)" value={active7d} icon={CalendarCheck} index={3} />
+      <StatCard label="Running Accounts" value={totalRunning} icon={Users} index={4} />
     </div>
   );
 }

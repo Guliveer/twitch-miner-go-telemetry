@@ -15,7 +15,7 @@ export function AccountsCard({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-3xl font-bold tabular-nums">{totalRunning}</p>
+        <p className="text-3xl font-medium tracking-tight tabular-nums">{totalRunning}</p>
       </CardContent>
     </Card>
   );

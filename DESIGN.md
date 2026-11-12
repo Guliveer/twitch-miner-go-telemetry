@@ -12,13 +12,19 @@ Carry the same column edges through the page. Available arrangements include an 
 
 Use only the sections and interface views the customer needs. The decorative chart, bars, and nodes are examples of a product object, not required application features or data.
 
+Application interfaces keep one maximum width and one gutter for the header, the filter or action bar, the content and the footer, so column edges line up at every width.
+
 ## Typography
 
 Use Geist for display and reading, and Geist Mono for labels, dates, numerical values, and short notes. The aliases "Modern Dark Grotesk" and "Modern Dark Mono" refer to those faces. Keep large type at regular weight with tight tracking: the opening display scales from 44px to 104px with leading near one. Section titles are smaller, while body copy stays relaxed. Distinguish leading phrases with bright text and supporting phrases with a readable grey; do not fade essential information into the background.
 
+Application interfaces use a fixed six-step scale: display (24px), heading (20px), title (16px), body (14px), small (12px) and label (11px). Negative tracking belongs to headings and titles only; small text and mono labels use neutral or slightly positive tracking, because tightening them costs legibility. Mono labels are uppercase with the label tracking token. Numerical values, tables and progress readouts use tabular figures so columns stay aligned while values change.
+
 ## Color and surfaces
 
 The ground token is the darkest field. Panel and hairline roles separate opaque surfaces without bright outlines. Use bright for titles and primary actions, read for paragraphs, and meta for small supporting text. Restrict live to small status marks with an accompanying label or state.
+
+Raised is the hover and rest state of a panel that sits above another panel; it is never used as a page background. Danger is a functional destructive state only: failing requests, destructive actions and invalid input. It is not a decorative accent. All three roles stay opaque.
 
 White light may fall across the hero and closing object through soft radial gradients. Product objects can have subtle grey material gradients. Keep ordinary reading areas flat. Use the small panel radius for imagery and frames, and the pill radius for buttons; these serve different roles.
 
@@ -26,7 +32,11 @@ White light may fall across the hero and closing object through soft radial grad
 
 Use compact pill buttons with a white filled primary action and a dark outlined secondary action. Hover changes fill or border; focus remains a visible offset outline. Frame product views as opaque graphite panels. Keep functional interface content truthful and legible.
 
-When comparisons are needed, use aligned columns with a quiet filled featured column. Show selection separately with a labeled control and a small signal. Disclosures use a numbered gutter, question, and plus/minus within ruled rows. These are available patterns, not required sections.
+One focus treatment serves the whole interface: a two-pixel bright outline offset by two pixels, applied through `:focus-visible`. Do not signal focus by recolouring a border alone, and never hide the control that receives focus. Form controls use the ground field, a hairline-2 border and the panel radius; the label sits above the control as a mono label, and helper text below in meta.
+
+Status is a small mono tag: filled live for an active state, outlined hairline for an inactive one. Tables carry a mono label header row on the panel field, hairline row rules and a panel hover; sortable headers are real buttons with `aria-sort` on the cell. Disclosures use a plus sign that becomes a cross when open, and their body is removed from layout when closed so long panels never clip.
+
+When comparisons are needed, use aligned columns with a quiet filled featured column. Show selection separately with a labeled control and a small signal. These are available patterns, not required sections.
 
 ## Images
 
@@ -34,7 +44,9 @@ Use grayscale editorial photography with restrained contrast and slightly darken
 
 ## Motion
 
-Use the duration and easing tokens for brief control color changes. The white lighting is static. Do not add pointer-following light, staged entrances, floating panels, or animated decorative charts.
+Use the duration and easing tokens for brief control color changes. The white lighting is static. Do not add pointer-following light, floating panels, or animated decorative charts. Interface surfaces may enter with a single restrained stagger: cards, panels, and groups fade and rise 8px over the entry token, successive surfaces step by the stagger token, and every such motion is removed entirely for users who prefer reduced motion. Buttons compress slightly while pressed; cards lift one pixel on hover and receive a one-pixel inset top highlight. A barely visible fixed grain texture may break the flatness of the ground.
+
+Honour `prefers-reduced-motion: reduce` by collapsing animation and transition durations to near zero; progress width changes, panel fades, entry staggers and toast entrances all follow that preference.
 
 ## Responsive behavior
 
@@ -42,7 +54,7 @@ Respond to the containing block. At 1180px, reduce gutters and give the opening 
 
 ## Design limits
 
-Keep large areas neutral and opaque. Avoid colored glows, translucent glass, heavy display weights, and decorative motion. Do not invent metrics, testimonials, application states, or extra sections to fill the available patterns.
+Keep large areas neutral and opaque. Avoid colored glows, translucent glass, heavy display weights, and decorative motion. Vector charts stay static or chart-internal; grain and entry stagger exist only within the limits of the Motion and Color and surfaces sections. Do not invent metrics, testimonials, application states, or extra sections to fill the available patterns.
 
 ## Authoritative tokens
 
@@ -50,17 +62,30 @@ Keep large areas neutral and opaque. Avoid colored glows, translucent glass, hea
 | --- | --- |
 | --dp-color-ground | #050505 |
 | --dp-color-panel | #0e0e0e |
+| --dp-color-raised | #161616 |
 | --dp-color-hairline | #222222 |
 | --dp-color-hairline-2 | #303030 |
 | --dp-color-bright | #f2f2f2 |
+| --dp-color-bright-hover | #dcdcdc |
 | --dp-color-read | #a6a9ad |
 | --dp-color-meta | #8a8d91 |
 | --dp-color-live | #3fd6c6 |
+| --dp-color-danger | #f87171 |
 | --dp-color-inverse-ink | #0a0a0a |
 | --dp-color-dim | #96999d |
 | --dp-typography-face | "Modern Dark Grotesk", "Helvetica Neue", Arial, sans-serif |
 | --dp-typography-mono | "Modern Dark Mono", "SFMono-Regular", Menlo, monospace |
+| --dp-type-display | 24px |
+| --dp-type-heading | 20px |
+| --dp-type-title | 16px |
+| --dp-type-body | 14px |
+| --dp-type-small | 12px |
+| --dp-type-label | 11px |
+| --dp-tracking-heading | -0.02em |
+| --dp-tracking-body | -0.011em |
+| --dp-tracking-label | 0.06em |
 | --dp-spacing-gutter | 48px |
+| --dp-spacing-gutter-narrow | 20px |
 | --dp-spacing-gap | 24px |
 | --dp-spacing-max | 1360px |
 | --dp-radius-panel | 6px |
@@ -68,3 +93,11 @@ Keep large areas neutral and opaque. Avoid colored glows, translucent glass, hea
 | --dp-border-hairline | 1px |
 | --dp-motion-duration | 120ms |
 | --dp-motion-ease | ease-out |
+| --dp-motion-entry-duration | 240ms |
+| --dp-motion-entry-stagger | 40ms |
+| --dp-motion-entry-lift | 8px |
+| --dp-motion-hover-lift | -1px |
+| --dp-motion-pressed-scale | 0.98 |
+| --dp-edge-highlight | rgba(255, 255, 255, 0.03) |
+| --dp-texture-grain | inline SVG fractalNoise turbulence tile, 160px |
+| --dp-texture-grain-opacity | 0.03 (tunable 0.02–0.04, stay barely visible) |

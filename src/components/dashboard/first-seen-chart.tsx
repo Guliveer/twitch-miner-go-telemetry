@@ -285,7 +285,7 @@ export function FirstSeenChart({
                 >
                   {m.label}
                   {splitMode === m.value && (
-                    <span className="absolute -bottom-px left-0 right-0 h-px bg-accent" />
+                    <span className="absolute -bottom-px left-0 right-0 h-px bg-success" />
                   )}
                 </button>
               ))}

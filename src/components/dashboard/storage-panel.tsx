@@ -57,8 +57,8 @@ function StorageStatCell({ label, value, icon: Icon, accent, loading, format }: 
       </div>
       <div className="label-mono text-muted-foreground mb-2">{label}</div>
       <div
-        className={`text-2xl md:text-3xl font-bold tracking-tight tabular-nums ${
-          accent ? "text-accent" : "text-foreground"
+        className={`text-2xl md:text-3xl font-medium tracking-tight tabular-nums ${
+          accent ? "text-foreground" : "text-foreground"
         }`}
       >
         {loading ? (
@@ -188,10 +188,7 @@ export function StoragePanel() {
   return (
     <div className="flex flex-col gap-6 sm:gap-8 md:gap-10 lg:gap-12">
       {/* Header */}
-      <div
-        className="flex flex-col gap-2"
-        style={{ animation: "fade-in-up 0.5s cubic-bezier(0.25, 0, 0, 1) both" }}
-      >
+      <div className="enter flex flex-col gap-2">
         <div className="flex items-start gap-3">
           <span className="label-mono text-muted-foreground">Storage</span>
         </div>
@@ -208,8 +205,8 @@ export function StoragePanel() {
 
       {/* Storage usage indicators */}
       <div
-        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-px bg-border"
-        style={{ animation: "fade-in-up 0.5s cubic-bezier(0.25, 0, 0, 1) 0.08s both" }}
+        className="enter grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-px bg-border"
+        data-enter={1}
       >
         <StorageStatCell
           label="Data size"
@@ -246,10 +243,7 @@ export function StoragePanel() {
       </div>
 
       {/* Manual cleanup */}
-      <div
-        className="border border-border p-6 md:p-8"
-        style={{ animation: "fade-in-up 0.5s cubic-bezier(0.25, 0, 0, 1) 0.16s both" }}
-      >
+      <div className="enter border border-border p-6 md:p-8" data-enter={2}>
         <p className="label-mono text-muted-foreground">Delete inactive instances</p>
         <p className="text-xs text-muted-foreground/60 mt-0.5 font-[450] max-w-xl">
           Permanently removes instances that have not reported a heartbeat for at least the selected
@@ -342,10 +336,7 @@ export function StoragePanel() {
       </div>
 
       {/* Delete a single instance by UUID */}
-      <div
-        className="border border-border p-6 md:p-8"
-        style={{ animation: "fade-in-up 0.5s cubic-bezier(0.25, 0, 0, 1) 0.24s both" }}
-      >
+      <div className="enter border border-border p-6 md:p-8" data-enter={3}>
         <p className="label-mono text-muted-foreground">Delete a specific instance</p>
         <p className="text-xs text-muted-foreground/60 mt-0.5 font-[450] max-w-xl">
           Permanently removes a single instance by its UUID/GUID, together with its version history.

@@ -1,11 +1,15 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { SignOut } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 
 export function LogoutButton() {
   const router = useRouter();
+  const pathname = usePathname();
+
+  // The sign-in screen has no session to end, so it must not offer sign-out.
+  if (pathname === "/login") return null;
 
   async function handleLogout() {
     await fetch("/api/auth", { method: "DELETE" });
